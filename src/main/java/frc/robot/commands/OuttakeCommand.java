@@ -8,10 +8,10 @@ import static frc.robot.Constants.RollersConfig.ROLLERS_VELOCITY;
 import static frc.robot.Constants.ShooterConfig.SHOOTER_VELOCITY;
 
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import frc.robot.subsystems.Indexer;
-import frc.robot.subsystems.Intake;
-import frc.robot.subsystems.Rollers;
-import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.indexer.Indexer;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.rollers.Rollers;
+import frc.robot.subsystems.shooter.Shooter;
 
 /** Reverses intake, rollers, indexer, and shooter together to spit a game piece back out. */
 public class OuttakeCommand extends ParallelCommandGroup {

@@ -4,12 +4,28 @@
 
 package frc.robot;
 
-import static frc.robot.Constants.IntakeConfig.INTAKE_VELOCITY;
+import static frc.robot.Constants.IntakeConfig.*;
 
-import frc.robot.subsystems.*;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.DriveConstants;
+import frc.robot.subsystems.indexer.Indexer;
+import frc.robot.subsystems.indexer.IndexerIOSim;
+import frc.robot.subsystems.indexer.IndexerIOTalonFX;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.IntakeIOSim;
+import frc.robot.subsystems.intake.IntakeIOTalonFX;
+import frc.robot.subsystems.rollers.Rollers;
+import frc.robot.subsystems.rollers.RollersIOSim;
+import frc.robot.subsystems.rollers.RollersIOTalonFX;
+import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.shooter.ShooterIOSim;
+import frc.robot.subsystems.shooter.ShooterIOTalonFX;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.OuttakeCommand;
 import frc.robot.commands.ShootingCommand;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -23,10 +39,15 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Indexer indexer = new Indexer();
-  private final Shooter shooter = new Shooter();
-  private final Intake intake = new Intake();
-  private final Rollers rollers = new Rollers();
+  private final Indexer indexer = new Indexer(
+      RobotBase.isReal() ? new IndexerIOTalonFX() : new IndexerIOSim());
+  private final Shooter shooter = new Shooter(
+      RobotBase.isReal() ? new ShooterIOTalonFX() : new ShooterIOSim());
+  private final Intake intake = new Intake(
+      RobotBase.isReal() ? new IntakeIOTalonFX() : new IntakeIOSim());
+  private final Rollers rollers = new Rollers(
+      RobotBase.isReal() ? new RollersIOTalonFX() : new RollersIOSim());
+  private final Drive drive = new Drive();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
@@ -48,19 +69,52 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    // A button toggles the intake on/off
-    m_driverController.a().toggleOnTrue(
-        intake.startEnd(
-            () -> intake.setIntakeMotorVelocity(INTAKE_VELOCITY),
-            () -> intake.setIntakeMotorVelocity(0)
-        )
-    );
+    // Default teleop drive: left stick translates (field-relative), right stick rotates.
+    drive.setDefaultCommand(
+        drive.run(
+            () -> {
+              double maxV = drive.maxLinearSpeedMps();
+              double maxOmega = drive.maxAngularSpeedRadPerSec();
+              double vx = -MathUtil.applyDeadband(m_driverController.getLeftY(), DriveConstants.JOYSTICK_DEADBAND) * maxV;
+              double vy = -MathUtil.applyDeadband(m_driverController.getLeftX(), DriveConstants.JOYSTICK_DEADBAND) * maxV;
+              double omega = -MathUtil.applyDeadband(m_driverController.getRightX(), DriveConstants.JOYSTICK_DEADBAND) * maxOmega;
+              drive.runFieldRelative(new ChassisSpeeds(vx, vy, omega));
+            }));
+
+    // A button: each press flips intakePitchPositionFlag, then runs one of two transient actions.
+    // m_driverController.a().onTrue(
+    //     intake.changePitchPositionCommand()
+    //         .andThen(Commands.either(
+    //             Commands.runOnce(() -> {
+    //                 intake.setDeployMotorPosition(INTAKE_DEPLOY_DOWN_POSITION);
+    //                 intake.setIntakeMotorVelocity(INTAKE_VELOCITY);
+    //             }, intake),
+    //             Commands.runOnce(() -> {
+    //                 intake.setIntakeMotorVelocity(0);
+    //                 intake.setDeployMotorPosition(INTAKE_DEPLOY_UP_POSITION);
+    //             }, intake),
+    //             intake::getIntakePitchFlag
+    //         ))
+    // );
+      // A held: extend the intake (deploy down) + spin rollers; release: stop + retract.
+      m_driverController.a().whileTrue(
+      intake.startEnd(
+          () -> {
+              intake.setDeployMotorPosition(INTAKE_DEPLOY_DOWN_POSITION);
+              intake.setIntakeMotorVelocity(INTAKE_VELOCITY);
+          },
+          () -> {
+              intake.setIntakeMotorVelocity(0);
+              intake.setDeployMotorPosition(INTAKE_DEPLOY_UP_POSITION);
+          }
+      )
+  );
 
     // Right trigger runs the full shooting sequence while held
-    m_driverController.rightTrigger().whileTrue(new ShootingCommand(shooter, indexer, rollers));
+    // m_driverController.rightTrigger().whileTrue(new ShootingCommand(shooter, indexer, rollers));
 
-    // Left trigger runs the outtake (everything reversed) while held
-    m_driverController.leftTrigger().whileTrue(new OuttakeCommand(intake, rollers, indexer, shooter));
+    // // Left trigger runs the outtake (everything reversed) while held
+    // m_driverController.leftTrigger().whileTrue(new OuttakeCommand(intake, rollers, indexer, shooter));
   }
 
   /**

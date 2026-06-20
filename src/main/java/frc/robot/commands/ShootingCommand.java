@@ -5,9 +5,9 @@ import static frc.robot.Constants.RollersConfig.ROLLERS_VELOCITY;
 import static frc.robot.Constants.ShooterConfig.SHOOTER_VELOCITY;
 
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import frc.robot.subsystems.Indexer;
-import frc.robot.subsystems.Rollers;
-import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.indexer.Indexer;
+import frc.robot.subsystems.rollers.Rollers;
+import frc.robot.subsystems.shooter.Shooter;
 
 /** Runs shooter, indexer, and rollers together. All stop when the command ends. */
 public class ShootingCommand extends ParallelCommandGroup {
