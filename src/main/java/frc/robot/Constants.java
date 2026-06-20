@@ -15,6 +15,20 @@ public final class Constants {
     public static final int kDriverControllerPort = 0;
   }
 
+  // AdvantageKit runtime mode. REAL on a roboRIO; SIM in the physics sim; REPLAY when re-running a log.
+  public static final Mode simMode = Mode.SIM;
+  public static final Mode currentMode =
+      edu.wpi.first.wpilibj.RobotBase.isReal() ? Mode.REAL : simMode;
+
+  public static enum Mode {
+    /** Running on a real robot. */
+    REAL,
+    /** Running a physics simulator. */
+    SIM,
+    /** Replaying from a log file. */
+    REPLAY
+  }
+
   // CAN IDs 1-8 reserved for swerve drivetrain
 
   public static final class ShooterConfig {
