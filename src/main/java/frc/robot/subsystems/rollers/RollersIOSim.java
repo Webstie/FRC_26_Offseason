@@ -1,6 +1,6 @@
 package frc.robot.subsystems.rollers;
 
-import static frc.robot.Constants.RollersConfig.*;
+import static frc.robot.Constants.SimConfig.*;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -25,6 +25,9 @@ public class RollersIOSim extends RollersIOTalonFX {
     sim.update(DT);
     s.setRawRotorPosition(sim.getAngularPositionRotations() * ROLLERS_GEAR_RATIO);
     s.setRotorVelocity((sim.getAngularVelocityRPM() / 60.0) * ROLLERS_GEAR_RATIO);
+
+    // Follower mirrors the leader; keep its supply voltage sane (not used for physics).
+    followerMotor.getSimState().setSupplyVoltage(12.0);
 
     super.updateInputs(inputs);
   }

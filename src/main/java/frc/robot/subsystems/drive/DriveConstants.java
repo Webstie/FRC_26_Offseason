@@ -1,5 +1,7 @@
 package frc.robot.subsystems.drive;
 
+import frc.robot.util.LoggedTunableNumber;
+
 /**
  * Sim-physics + teleop tunables for the swerve drive.
  *
@@ -17,6 +19,44 @@ public final class DriveConstants {
   // (wheel radius + gear ratios for the sim module come from TunerConstants, so the maple-sim physics
   // stays consistent with the odometry path — see RobotContainer's SwerveModuleSimulationConfig.)
 
+  // ---- PathPlanner RobotConfig (used once by Drive's AutoBuilder.configure() call) ----
+  // Placeholder yaw moment of inertia (kg*m^2) — no deploy/pathplanner/settings.json exists yet
+  // (the PathPlanner GUI's Robot Settings panel would normally supply this via
+  // RobotConfig.fromGUISettings()), so it's built in code from ROBOT_MASS_KG/WHEEL_COF above plus
+  // this. Measure or estimate for real once you have a robot to test on.
+  public static final double ROBOT_MOI_KG_M2 = 6.0;
+
+  // ---- PathPlanner autonomous path-following (PPHolonomicDriveController); placeholders to tune ----
+  public static final double PATH_TRANSLATION_KP = 5.0;
+  public static final double PATH_TRANSLATION_KI = 0.0;
+  public static final double PATH_TRANSLATION_KD = 0.0;
+  public static final double PATH_ROTATION_KP = 1.5;
+  public static final double PATH_ROTATION_KI = 0.0;
+  public static final double PATH_ROTATION_KD = 0.0;
+
   // ---- Teleop ----
-  public static final double JOYSTICK_DEADBAND = 0.1;
+  public static final double JOYSTICK_DEADBAND = 0.015;
+  // Full stick deflection maps to this fraction of max angular speed (translation is unaffected).
+  public static final double TELEOP_ROTATION_SPEED_SCALAR = 0.5;
+
+  // ---- Auto-aim: profiled heading controller that turns the robot to face the alliance goal ----
+  // Profiled (trapezoidal) so the turn eases in/out instead of slamming to max speed and oscillating.
+  public static final double AIM_KP = 5.0; // tune on your robot
+  public static final double AIM_KI = 0.0;
+  public static final double AIM_KD = 0.4; // derivative damping — stops the overshoot/shake
+  public static final double AIM_MAX_VELOCITY_RAD_PER_SEC = 8.0; // raise for snappier aim
+  public static final double AIM_MAX_ACCEL_RAD_PER_SEC2 = 20.0;
+  // Live-tunable (degrees, easier to dial in on the field than radians) -- how close the chassis
+  // heading must read before ShootCommands' "aligned" feed gate considers it on target. Unlike its
+  // sibling tolerances (SHOOTER_VELOCITY_TOLERANCE_RPS, HOOD_TOLERANCE_ROTATIONS) this used to be a
+  // fixed constant requiring a redeploy to adjust -- a real chassis chattering in/out of a tight
+  // tolerance (backlash, pose noise) can defeat ShootSequenceConfig.READY_DEBOUNCE_SEC entirely, so
+  // being able to loosen this live while testing matters.
+  public static final LoggedTunableNumber AIM_TOLERANCE_DEG =
+      new LoggedTunableNumber("Drive/AimToleranceDeg", 2.0);
+      public static final LoggedTunableNumber AUTO_AIM_TOLERANCE_DEG =
+      new LoggedTunableNumber("Drive/AimToleranceDeg", 5.0);
+  // Heading offset so the shooter end faces the goal. Carriage/intake is on the front (+x) and the
+  // shooter fires out the back (-x), so aim the rear at the goal: offset = 180deg.
+  public static final double AIM_HEADING_OFFSET_RAD = Math.PI;
 }

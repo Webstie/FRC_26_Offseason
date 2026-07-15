@@ -33,8 +33,8 @@ deploy {
                 frcStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
                     files = project.fileTree('src/main/deploy')
                     directory = '/home/lvuser/deploy'
-                    deleteOldFiles = false // Change to true to delete files on roboRIO that no
-                                           // longer exist in deploy directory of this project
+                    deleteOldFiles = true // Delete files on roboRIO that no longer exist in this
+                                          // project's deploy dir (stale PathPlanner paths/autos)
                 }
             }
         }
@@ -110,6 +110,8 @@ wpi.java.configureTestTasks(test)
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
+    // Sources are UTF-8 (allows non-ASCII comments, e.g. 中文); don't fall back to the platform charset.
+    options.encoding = 'UTF-8'
 }
 
 // AdvantageKit log-replay task: `./gradlew replayWatch`

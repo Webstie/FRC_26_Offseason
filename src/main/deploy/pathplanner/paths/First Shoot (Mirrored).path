@@ -1,0 +1,87 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.1677726063829788,
+        "y": 5.3417861579414377
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.014862224839057,
+        "y": 6.589212954747117
+      },
+      "isLocked": false,
+      "linkedName": "ShootPosition_Mirror"
+    },
+    {
+      "anchor": {
+        "x": 3.5458740017746226,
+        "y": 7.459
+      },
+      "prevControl": {
+        "x": 2.883465976530362,
+        "y": 7.4160835861321165
+      },
+      "nextControl": {
+        "x": 4.15751552795031,
+        "y": 7.498627329192548
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 4.946211180124224,
+        "y": 7.458387755102042
+      },
+      "prevControl": {
+        "x": 3.87583850931677,
+        "y": 7.458387755102042
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "ShootToTrench_Mirror"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 1.14,
+      "rotationDegrees": 0.0
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [
+    {
+      "name": "DeployIntake",
+      "waypointRelativePos": 0.21311475409836075,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "DeployIntake"
+        }
+      }
+    }
+  ],
+  "globalConstraints": {
+    "maxVelocity": 3,
+    "maxAcceleration": 3,
+    "maxAngularVelocity": 540,
+    "maxAngularAcceleration": 720,
+    "nominalVoltage": 12,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 2,
+    "rotation": 0.0
+  },
+  "reversed": false,
+  "folder": "New New Folder",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 145.750966993188
+  },
+  "useDefaultConstraints": true
+}

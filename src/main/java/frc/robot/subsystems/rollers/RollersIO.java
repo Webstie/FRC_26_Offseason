@@ -16,5 +16,9 @@ public interface RollersIO {
   /** Run the rollers at the given rotor velocity (rps). */
   default void setVelocity(double rps) {}
 
-  default void stop() {}
+  /** Live-update the velocity-loop gains (Slot0) for tuning. */
+  default void setGains(double kP, double kI, double kD, double kS, double kV) {}
+
+  /** Live-update the peak torque-current limit (amps). */
+  default void setCurrentLimit(double amps) {}
 }

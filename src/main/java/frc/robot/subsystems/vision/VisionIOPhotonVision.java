@@ -7,16 +7,20 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
 
 /** Real-hardware AprilTag camera using a PhotonVision coprocessor. */
 public class VisionIOPhotonVision implements VisionIO {
   protected final PhotonCamera camera;
   protected final Transform3d robotToCamera;
+  private final PhotonPoseEstimator poseEstimator;
 
   public VisionIOPhotonVision(String name, Transform3d robotToCamera) {
     this.camera = new PhotonCamera(name);
     this.robotToCamera = robotToCamera;
+    this.poseEstimator = new PhotonPoseEstimator(VisionConstants.APRIL_TAG_LAYOUT, robotToCamera);
   }
 
   @Override
@@ -25,40 +29,49 @@ public class VisionIOPhotonVision implements VisionIO {
 
     Set<Short> tagIds = new HashSet<>();
     List<PoseObservation> poseObservations = new LinkedList<>();
-    for (var result : camera.getAllUnreadResults()) {
-      // Latest single-target angle (for aiming).
-      if (result.hasTargets()) {
-        inputs.latestTargetObservation =
-            new TargetObservation(
-                Rotation2d.fromDegrees(result.getBestTarget().getYaw()),
-                Rotation2d.fromDegrees(result.getBestTarget().getPitch()));
-      } else {
-        inputs.latestTargetObservation = new TargetObservation(new Rotation2d(), new Rotation2d());
-      }
-
-      // Multi-tag pose estimate (the field<-camera transform solved on the coprocessor).
-      if (result.multitagResult.isPresent()) {
-        var multitagResult = result.multitagResult.get();
-
-        Transform3d fieldToCamera = multitagResult.estimatedPose.best;
-        Transform3d fieldToRobot = fieldToCamera.plus(robotToCamera.inverse());
-        Pose3d robotPose = new Pose3d(fieldToRobot.getTranslation(), fieldToRobot.getRotation());
-
-        double totalTagDistance = 0.0;
-        for (var target : result.targets) {
-          totalTagDistance += target.bestCameraToTarget.getTranslation().getNorm();
+    // Skip polling a camera we already know is offline: getAllUnreadResults() runs PhotonLib's
+    // internal verifyVersion() check, which on a not-found coprocessor reports a full stack-trace
+    // error to the DriverStation every call — expensive enough on the RIO to blow the 20ms loop
+    // budget when a coprocessor is disconnected/still booting. isConnected() is a cheap NT read.
+    if (inputs.connected) {
+      for (var result : camera.getAllUnreadResults()) {
+        // Latest single-target angle (for aiming).
+        if (result.hasTargets()) {
+          inputs.latestTargetObservation =
+              new TargetObservation(
+                  Rotation2d.fromDegrees(result.getBestTarget().getYaw()),
+                  Rotation2d.fromDegrees(result.getBestTarget().getPitch()));
+        } else {
+          inputs.latestTargetObservation =
+              new TargetObservation(new Rotation2d(), new Rotation2d());
         }
 
-        tagIds.addAll(multitagResult.fiducialIDsUsed);
+        for (var target : result.targets) {
+          if (target.getFiducialId() >= 0) {
+            tagIds.add((short) target.getFiducialId());
+          }
+        }
 
-        poseObservations.add(
-            new PoseObservation(
-                result.getTimestampSeconds(),
-                robotPose,
-                multitagResult.estimatedPose.ambiguity,
-                multitagResult.fiducialIDsUsed.size(),
-                totalTagDistance / result.targets.size(),
-                PoseObservationType.PHOTONVISION));
+        var estimatedPose =
+            poseEstimator
+                .estimateCoprocMultiTagPose(result)
+                .or(() -> poseEstimator.estimateLowestAmbiguityPose(result));
+        if (estimatedPose.isPresent()) {
+          double totalTagDistance = 0.0;
+          for (var target : result.targets) {
+            totalTagDistance += target.bestCameraToTarget.getTranslation().getNorm();
+          }
+          int tagCount = estimatedPose.get().targetsUsed.size();
+
+          poseObservations.add(
+              new PoseObservation(
+                  result.getTimestampSeconds(),
+                  estimatedPose.get().estimatedPose,
+                  getPoseAmbiguity(estimatedPose.get()),
+                  tagCount,
+                  totalTagDistance / tagCount,
+                  PoseObservationType.PHOTONVISION));
+        }
       }
     }
 
@@ -69,5 +82,20 @@ public class VisionIOPhotonVision implements VisionIO {
     for (short id : tagIds) {
       inputs.tagIds[i++] = id;
     }
+  }
+
+  private double getPoseAmbiguity(EstimatedRobotPose estimatedPose) {
+    if (estimatedPose.strategy == PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR) {
+      return 0.0;
+    }
+
+    double lowestAmbiguity = Double.POSITIVE_INFINITY;
+    for (var target : estimatedPose.targetsUsed) {
+      double ambiguity = target.getPoseAmbiguity();
+      if (ambiguity >= 0.0 && ambiguity < lowestAmbiguity) {
+        lowestAmbiguity = ambiguity;
+      }
+    }
+    return Double.isFinite(lowestAmbiguity) ? lowestAmbiguity : 1.0;
   }
 }

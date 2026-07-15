@@ -2,6 +2,11 @@ package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -14,14 +19,21 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.FieldConstants;
 import frc.robot.generated.TunerConstants;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,8 +48,11 @@ import org.littletonrobotics.junction.Logger;
  * TunerConstants}. Simulation runs through maple-sim ({@link ModuleIOSim}/{@link GyroIOSim}); the
  * physics world is advanced once per loop in {@link #simulationPeriodic()}.
  *
- * <p>PathPlanner was removed from the original template; add it back (vendordep + AutoBuilder) when
- * you want autonomous path following.
+ * <p>PathPlanner's {@link AutoBuilder} is configured at the end of the constructor below, so
+ * PathPlannerAuto commands (and {@code AutoBuilder.buildAutoChooser()} in RobotContainer) can drive
+ * this subsystem. {@link RobotConfig} is built in code from {@link DriveConstants} + {@link
+ * TunerConstants} instead of {@code RobotConfig.fromGUISettings()}, since no
+ * deploy/pathplanner/settings.json exists yet.
  */
 public class Drive extends SubsystemBase {
   static final double ODOMETRY_FREQUENCY = TunerConstants.kCANBus.isNetworkFD() ? 250.0 : 100.0;
@@ -55,6 +70,17 @@ public class Drive extends SubsystemBase {
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
   private final SysIdRoutine sysId;
+  private final Field2d field = new Field2d();
+  private final StructPublisher<Pose2d> robotPosePublisher =
+      NetworkTableInstance.getDefault()
+          .getStructTopic("SmartDashboard/RobotPose", Pose2d.struct)
+          .publish();
+  private final DoublePublisher robotXPublisher =
+      NetworkTableInstance.getDefault().getDoubleTopic("SmartDashboard/RobotX").publish();
+  private final DoublePublisher robotYPublisher =
+      NetworkTableInstance.getDefault().getDoubleTopic("SmartDashboard/RobotY").publish();
+  private final DoublePublisher robotHeadingPublisher =
+      NetworkTableInstance.getDefault().getDoubleTopic("SmartDashboard/RobotHeadingDeg").publish();
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
 
@@ -85,6 +111,8 @@ public class Drive extends SubsystemBase {
     // Start odometry thread (no-op in sim, where no Phoenix signals are registered)
     PhoenixOdometryThread.getInstance().start();
 
+    SmartDashboard.putData("Field", field);
+
     // Configure SysId
     sysId =
         new SysIdRoutine(
@@ -95,6 +123,39 @@ public class Drive extends SubsystemBase {
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
+
+    // ---- PathPlanner: register this drivetrain so PathPlannerAuto commands (and
+    // AutoBuilder.buildAutoChooser() in RobotContainer) can drive it. Numbers below mirror the
+    // swerve module specs already in TunerConstants, plus a made-up MOI (DriveConstants) — replace
+    // with real numbers once you have them.
+    AutoBuilder.configure(
+        this::getPose,
+        this::setPose,
+        this::getChassisSpeeds,
+        (speeds, feedforwards) -> runVelocity(speeds),
+        new PPHolonomicDriveController(
+            new PIDConstants(
+                DriveConstants.PATH_TRANSLATION_KP,
+                DriveConstants.PATH_TRANSLATION_KI,
+                DriveConstants.PATH_TRANSLATION_KD),
+            new PIDConstants(
+                DriveConstants.PATH_ROTATION_KP,
+                DriveConstants.PATH_ROTATION_KI,
+                DriveConstants.PATH_ROTATION_KD)),
+        new RobotConfig(
+            DriveConstants.ROBOT_MASS_KG,
+            DriveConstants.ROBOT_MOI_KG_M2,
+            new ModuleConfig(
+                TunerConstants.FrontLeft.WheelRadius,
+                getMaxLinearSpeedMetersPerSec(),
+                DriveConstants.WHEEL_COF,
+                DCMotor.getKrakenX60Foc(1),
+                TunerConstants.FrontLeft.DriveMotorGearRatio,
+                TunerConstants.FrontLeft.SlipCurrent,
+                1),
+            getModuleTranslations()),
+        FieldConstants::isRedAlliance,
+        this);
   }
 
   @Override
@@ -150,6 +211,17 @@ public class Drive extends SubsystemBase {
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
+
+    publishPose();
+  }
+
+  private void publishPose() {
+    Pose2d pose = getPose();
+    field.setRobotPose(pose);
+    robotPosePublisher.set(pose);
+    robotXPublisher.set(pose.getX());
+    robotYPublisher.set(pose.getY());
+    robotHeadingPublisher.set(pose.getRotation().getDegrees());
   }
 
   /**
@@ -231,7 +303,7 @@ public class Drive extends SubsystemBase {
 
   /** Returns the measured chassis speeds of the robot. */
   @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
-  private ChassisSpeeds getChassisSpeeds() {
+  public ChassisSpeeds getChassisSpeeds() {
     return kinematics.toChassisSpeeds(getModuleStates());
   }
 

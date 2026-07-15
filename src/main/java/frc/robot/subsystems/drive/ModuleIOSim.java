@@ -27,7 +27,13 @@ public class ModuleIOSim implements ModuleIO {
   private static final double DRIVE_KV_ROT = 0.91035; // (volt * sec) / rotation
   private static final double DRIVE_KV = 1.0 / Units.rotationsToRadians(1.0 / DRIVE_KV_ROT);
   private static final double TURN_KP = 8.0;
-  private static final double TURN_KD = 0.0;
+  // P-only steer (the stock template default) limit-cycles against maple-sim's azimuth inertia +
+  // friction, causing a visible at-rest jitter. A little derivative damps it; keep it well below
+  // ~0.5 (which re-introduces oscillation).
+  private static final double TURN_KD = 0.1;
+  // Parked-stop: once the steer is on-target and at rest, stop commanding it so the loop can't hunt.
+  private static final double TURN_PARKED_TOLERANCE_RAD = Units.degreesToRadians(0.5);
+  private static final double TURN_PARKED_SPEED_RAD_PER_SEC = Units.degreesToRadians(2.0);
 
   private final SwerveModuleSimulation moduleSimulation;
   private final SimulatedMotorController.GenericMotorController driveMotor;
@@ -64,8 +70,19 @@ public class ModuleIOSim implements ModuleIO {
       driveController.reset();
     }
     if (turnClosedLoop) {
-      turnAppliedVolts =
-          turnController.calculate(moduleSimulation.getSteerAbsoluteFacing().getRadians());
+      double measuredRad = moduleSimulation.getSteerAbsoluteFacing().getRadians();
+      double errorRad = MathUtil.angleModulus(turnController.getSetpoint() - measuredRad);
+      double steerSpeedRadPerSec =
+          moduleSimulation.getSteerAbsoluteEncoderSpeed().in(RadiansPerSecond);
+      // Parked on-target: hold 0 V so the P loop can't limit-cycle (the at-rest jitter). The windows
+      // are far tighter than any real steer target, so this never interferes with reorientation.
+      if (Math.abs(errorRad) < TURN_PARKED_TOLERANCE_RAD
+          && Math.abs(steerSpeedRadPerSec) < TURN_PARKED_SPEED_RAD_PER_SEC) {
+        turnAppliedVolts = 0.0;
+        turnController.reset();
+      } else {
+        turnAppliedVolts = turnController.calculate(measuredRad);
+      }
     } else {
       turnController.reset();
     }

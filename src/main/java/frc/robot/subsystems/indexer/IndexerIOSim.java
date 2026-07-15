@@ -1,6 +1,6 @@
 package frc.robot.subsystems.indexer;
 
-import static frc.robot.Constants.IndexerConfig.*;
+import static frc.robot.Constants.SimConfig.*;
 
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 public class IndexerIOSim extends IndexerIOTalonFX {
 
   private static final double DT = 0.020;
+  private static final double SUPPLY_VOLTAGE = 12.0; // fixed bus voltage (no battery-sag coupling)
 
   private final DCMotorSim sim = new DCMotorSim(
       LinearSystemId.createDCMotorSystem(
@@ -19,15 +20,20 @@ public class IndexerIOSim extends IndexerIOTalonFX {
 
   @Override
   public void updateInputs(IndexerIOInputs inputs) {
-    TalonFXSimState s = leaderMotor.getSimState();
-    s.setSupplyVoltage(12.0);
-    sim.setInputVoltage(s.getMotorVoltage());
+    TalonFXSimState leaderState   = leaderMotor.getSimState();
+    TalonFXSimState followerState = followerMotor.getSimState();
+    leaderState.setSupplyVoltage(SUPPLY_VOLTAGE);
+    followerState.setSupplyVoltage(SUPPLY_VOLTAGE);
+    // Single one-motor plant driven by the leader's output; the follower mirrors the leader, so
+    // both sim states are fed the same rotor state.
+    sim.setInputVoltage(leaderState.getMotorVoltage());
     sim.update(DT);
-    s.setRawRotorPosition(sim.getAngularPositionRotations() * INDEXER_GEAR_RATIO);
-    s.setRotorVelocity((sim.getAngularVelocityRPM() / 60.0) * INDEXER_GEAR_RATIO);
-
-    // follower mirrors the leader; keep its sim supply voltage sane (not used for physics)
-    followerMotor.getSimState().setSupplyVoltage(12.0);
+    double rotorRotations = sim.getAngularPositionRotations() * INDEXER_GEAR_RATIO;
+    double rotorRPS = (sim.getAngularVelocityRPM() / 60.0) * INDEXER_GEAR_RATIO;
+    leaderState.setRawRotorPosition(rotorRotations);
+    leaderState.setRotorVelocity(rotorRPS);
+    followerState.setRawRotorPosition(rotorRotations);
+    followerState.setRotorVelocity(rotorRPS);
 
     super.updateInputs(inputs);
   }
