@@ -62,12 +62,19 @@ public final class VisionConstants {
       new LoggedTunableNumber("Vision/AngularStdDevBaseline", 0.06); // radians
 
   // Trust degrades further while the chassis translates/rotates fast (motion blur, rolling shutter
-  // skew, and vision-to-odometry timestamp mismatch all worsen in motion). Multiplier applied to
-  // both linear and angular std dev = 1 + SPEED_FACTOR*|v| + ROTATION_FACTOR*|omega|.
+  // skew, and vision-to-odometry timestamp mismatch all worsen in motion). Kept as TWO SEPARATE
+  // multipliers (linear std dev scaled only by |v|, angular only by |omega|) rather than one shared
+  // multiplier applied to both: a fast in-place spin has a legitimately worse angular solve (motion
+  // blur on the tag corners), but there's no reason it should also tank the X/Y trust -- translation
+  // is exactly what's needed to correct the wheel-odometry scrub/slip that a fast spin causes, so
+  // gutting it at the same time only makes that drift worse. (Coupling the two was the bug behind an
+  // earlier test where spinning in place a few times made the estimated position "fall apart": high
+  // omega inflated BOTH std devs together, so vision could barely correct translation right when
+  // odometry needed it most.)
   public static final LoggedTunableNumber SPEED_STD_DEV_FACTOR =
-      new LoggedTunableNumber("Vision/SpeedStdDevFactor", 0.25); // per m/s
+      new LoggedTunableNumber("Vision/SpeedStdDevFactor", 0.25); // per m/s, linear std dev only
   public static final LoggedTunableNumber ROTATION_STD_DEV_FACTOR =
-      new LoggedTunableNumber("Vision/RotationStdDevFactor", 0.5); // per rad/s
+      new LoggedTunableNumber("Vision/RotationStdDevFactor", 0.5); // per rad/s, angular std dev only
 
   // Per-camera trust multipliers (index matches the VisionIO order). Lower = trust this camera more.
   public static final double[] CAMERA_STD_DEV_FACTORS = new double[] {1.0, 1.0, 1.0, 1.0};

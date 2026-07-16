@@ -28,12 +28,12 @@ public final class FeedProfile {
 
   // {distance, speed} — placeholder calibration; re-measure on the real robot.
   public static final double[][] TABLE = {
-    {3.0, 35.0},
-    {5.0, 42.0},
-    {7.0, 48.0},
+    {3.0, 40.0},
+    {5.0, 45.0},
+    {7.0, 60.0},
     {9.0, 55.0},
-    {12.0, 63.0},
-    {16.0, 72.0},
+    {12.0, 65.0},
+    {16.0, 75.0},
   };
 
   private static final int COL_SPEED = 1;

@@ -26,9 +26,9 @@ public final class ShooterProfile {
   // {distance, speed, hoodRotations} — placeholder calibration; re-measure on the real robot.
   // hoodRotations must stay within [HOOD_MIN_ROTATIONS=0.0, HOOD_MAX_ROTATIONS=1.7].
   public static final double[][] PID_TABLE = {
-    {1.25, 47.5, 0.25},
-    {1.75, 50, 0.4},
-    {2.25, 50.0, 0.53},
+    {1.25, 47.5, 0.4},
+    {1.75, 50, 0.5},
+    {2.25, 50.0, 0.57},
   };
   public static final double[][] BANGBANG_TABLE = {
     {2.25, 40, 0.6},

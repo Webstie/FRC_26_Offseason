@@ -60,15 +60,16 @@ public class Vision extends SubsystemBase {
     }
 
     // Trust shrinks further while the chassis is moving/rotating fast: motion blur, rolling
-    // shutter skew, and vision-to-odometry timestamp mismatch all get worse in motion.
+    // shutter skew, and vision-to-odometry timestamp mismatch all get worse in motion. Linear and
+    // angular get INDEPENDENT multipliers (translating fast penalizes only linear trust, spinning
+    // fast penalizes only angular trust) -- see the doc on the two factor constants for why a
+    // shared multiplier was actively harmful during a fast in-place spin.
     ChassisSpeeds currentSpeeds = chassisSpeedsSupplier.get();
     double speedMetersPerSec =
         Math.hypot(currentSpeeds.vxMetersPerSecond, currentSpeeds.vyMetersPerSecond);
     double omegaRadPerSec = Math.abs(currentSpeeds.omegaRadiansPerSecond);
-    double motionStdDevMultiplier =
-        1.0
-            + SPEED_STD_DEV_FACTOR.get() * speedMetersPerSec
-            + ROTATION_STD_DEV_FACTOR.get() * omegaRadPerSec;
+    double linearMotionMultiplier = 1.0 + SPEED_STD_DEV_FACTOR.get() * speedMetersPerSec;
+    double angularMotionMultiplier = 1.0 + ROTATION_STD_DEV_FACTOR.get() * omegaRadPerSec;
 
     List<Pose3d> allTagPoses = new LinkedList<>();
     List<Pose3d> allRobotPoses = new LinkedList<>();
@@ -114,8 +115,8 @@ public class Vision extends SubsystemBase {
         // chassis speed/rotation rate.
         double stdDevFactor =
             Math.pow(observation.averageTagDistance(), 2.0) / observation.tagCount();
-        double linearStdDev = LINEAR_STD_DEV_BASELINE.get() * stdDevFactor * motionStdDevMultiplier;
-        double angularStdDev = ANGULAR_STD_DEV_BASELINE.get() * stdDevFactor * motionStdDevMultiplier;
+        double linearStdDev = LINEAR_STD_DEV_BASELINE.get() * stdDevFactor * linearMotionMultiplier;
+        double angularStdDev = ANGULAR_STD_DEV_BASELINE.get() * stdDevFactor * angularMotionMultiplier;
         if (cameraIndex < CAMERA_STD_DEV_FACTORS.length) {
           linearStdDev *= CAMERA_STD_DEV_FACTORS[cameraIndex];
           angularStdDev *= CAMERA_STD_DEV_FACTORS[cameraIndex];

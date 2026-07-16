@@ -46,6 +46,14 @@ public final class DriveConstants {
   public static final double AIM_KD = 0.4; // derivative damping — stops the overshoot/shake
   public static final double AIM_MAX_VELOCITY_RAD_PER_SEC = 8.0; // raise for snappier aim
   public static final double AIM_MAX_ACCEL_RAD_PER_SEC2 = 20.0;
+  // Single-pole low-pass on the heading controller's omega OUTPUT (not its input heading) -- damps
+  // whatever residual jitter is still in the fused pose (vision noise, wheel-odometry noise, PID
+  // derivative kick) into a smooth commanded turn instead of a visible chassis shake. Filtering the
+  // output instead of the input heading sidesteps the +-180deg wraparound a raw low-pass on the
+  // angle itself would choke on, and doesn't touch the actual field pose used elsewhere (paths,
+  // odometry) -- it only smooths what this one controller commands. Raise for smoother/slower,
+  // lower (toward 0) for snappier/twitchier.
+  public static final double AIM_OMEGA_FILTER_TIME_CONSTANT_SEC = 0.1;
   // Live-tunable (degrees, easier to dial in on the field than radians) -- how close the chassis
   // heading must read before ShootCommands' "aligned" feed gate considers it on target. Unlike its
   // sibling tolerances (SHOOTER_VELOCITY_TOLERANCE_RPS, HOOD_TOLERANCE_ROTATIONS) this used to be a
@@ -54,8 +62,8 @@ public final class DriveConstants {
   // being able to loosen this live while testing matters.
   public static final LoggedTunableNumber AIM_TOLERANCE_DEG =
       new LoggedTunableNumber("Drive/AimToleranceDeg", 2.0);
-      public static final LoggedTunableNumber AUTO_AIM_TOLERANCE_DEG =
-      new LoggedTunableNumber("Drive/AimToleranceDeg", 5.0);
+  public static final LoggedTunableNumber AUTO_AIM_TOLERANCE_DEG =
+      new LoggedTunableNumber("Drive/AutoAimToleranceDeg", 5.0);
   // Heading offset so the shooter end faces the goal. Carriage/intake is on the front (+x) and the
   // shooter fires out the back (-x), so aim the rear at the goal: offset = 180deg.
   public static final double AIM_HEADING_OFFSET_RAD = Math.PI;

@@ -4,12 +4,12 @@
     {
       "anchor": {
         "x": 5.590044365572315,
-        "y": 5.3417861579414377
+        "y": 5.341786157941438
       },
       "prevControl": null,
       "nextControl": {
         "x": 4.6043144169266315,
-        "y": 5.3417861579414377
+        "y": 5.341786157941438
       },
       "isLocked": false,
       "linkedName": "CenterToBump_Mirror"
@@ -17,7 +17,7 @@
     {
       "anchor": {
         "x": 3.1677726063829788,
-        "y": 5.3417861579414377
+        "y": 5.341786157941438
       },
       "prevControl": {
         "x": 3.5379766880156316,
@@ -76,7 +76,7 @@
     "rotation": 145.750966993188
   },
   "reversed": false,
-  "folder": "New New Folder",
+  "folder": "LEFT",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 90.0

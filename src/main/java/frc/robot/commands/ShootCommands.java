@@ -9,15 +9,17 @@ import static frc.robot.Constants.CarriageConfig.CARRIAGE_DOWN_POSITION;
 import static frc.robot.Constants.CarriageConfig.CARRIAGE_UP_POSITION;
 import static frc.robot.Constants.FeedConfig.FEED_HOOD_ROTATIONS;
 import static frc.robot.Constants.IndexerConfig.INDEXER_VELOCITY;
+import static frc.robot.Constants.ManualShootConfig.MANUAL_CARRIAGE_FAST_RETRACT_ROT_PER_SEC;
 import static frc.robot.Constants.ManualShootConfig.MANUAL_CARRIAGE_RETRACT_ROT_PER_SEC;
-import static frc.robot.Constants.ManualShootConfig.MANUAL_FEED_DELAY_SEC;
+import static frc.robot.Constants.ManualShootConfig.MANUAL_CARRIAGE_RETRACT_SPLIT_POSITION;
 import static frc.robot.Constants.ManualShootConfig.MANUAL_HOOD_ROTATIONS;
 import static frc.robot.Constants.ManualShootConfig.MANUAL_SHOOTER_RPS;
 import static frc.robot.Constants.RollersConfig.ROLLERS_VELOCITY;
 import static frc.robot.Constants.ShootSequenceConfig.AIM_DRIVE_ENABLED;
 import static frc.robot.Constants.ShootSequenceConfig.BENCH_SHOOTER_RPS;
+import static frc.robot.Constants.ShootSequenceConfig.CARRIAGE_FAST_RETRACT_ROT_PER_SEC;
 import static frc.robot.Constants.ShootSequenceConfig.CARRIAGE_RETRACT_ROT_PER_SEC;
-import static frc.robot.Constants.ShootSequenceConfig.FEED_DELAY_SEC;
+import static frc.robot.Constants.ShootSequenceConfig.CARRIAGE_RETRACT_SPLIT_POSITION;
 import static frc.robot.Constants.ShootSequenceConfig.READY_DEBOUNCE_SEC;
 import static frc.robot.Constants.ShootSequenceConfig.REQUIRE_ALIGNED_TO_FEED;
 import static frc.robot.Constants.ShootSequenceConfig.SHOOTER_CONTROL_MODE_DISTANCE_M;
@@ -31,6 +33,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -113,9 +116,15 @@ public final class ShootCommands {
                 DriveConstants.AIM_MAX_ACCEL_RAD_PER_SEC2));
     headingController.enableContinuousInput(-Math.PI, Math.PI);
     headingController.setTolerance(Math.toRadians(DriveConstants.AIM_TOLERANCE_DEG.get()));
+    // Smooths the heading controller's omega output -- see the constant's doc for why this filters
+    // the output instead of the (wraparound-prone) input heading.
+    LinearFilter omegaFilter =
+        LinearFilter.singlePoleIIR(DriveConstants.AIM_OMEGA_FILTER_TIME_CONSTANT_SEC, DT);
 
     // Boxed so the run() lambda can mutate it; reset in beforeStarting().
     double[] carriageTarget = {CARRIAGE_DOWN_POSITION.get()};
+    // Which leg of the double-compress retract we're on -- see stepCarriageRetract's javadoc.
+    int[] retractPhase = {0};
     // Latched true the first moment readyToShoot is true; from then on the feed runs continuously
     // until the command ends (and the timer paces the carriage retract).
     boolean[] feedStarted = {false};
@@ -177,7 +186,9 @@ public final class ShootCommands {
                 targetHeading =
                     Math.atan2(goal.getY() - robot.getY(), goal.getX() - robot.getX())
                         + DriveConstants.AIM_HEADING_OFFSET_RAD;
-                omega = headingController.calculate(drive.getRotation().getRadians(), targetHeading);
+                omega =
+                    omegaFilter.calculate(
+                        headingController.calculate(drive.getRotation().getRadians(), targetHeading));
                 lockedHeadingRad[0] = targetHeading;
               } else {
                 targetHeading = lockedHeadingRad[0];
@@ -230,16 +241,17 @@ public final class ShootCommands {
               }
               SmartDashboard.putBoolean("AutoShoot/FeedCommanded", feedStarted[0]);
 
-              // Step 2: hold the carriage deployed for FEED_DELAY_SEC after feeding began, THEN start
-              // the slow retract (ramp the setpoint down; MotionMagic follows). Timed from the first
-              // feed moment, so a brief dip out of "ready" doesn't restart the delay.
-              boolean retracting = feedStarted[0] && feedTimer.hasElapsed(FEED_DELAY_SEC.get());
+              // Step 2: the instant the feed latches, start the "double compress" retract -- no more
+              // holding at full deploy first (see stepCarriageRetract's javadoc).
+              boolean retracting = feedStarted[0];
               if (retracting) {
                 carriageTarget[0] =
-                    MathUtil.clamp(
-                        carriageTarget[0] - CARRIAGE_RETRACT_ROT_PER_SEC.get() * DT,
-                        CARRIAGE_UP_POSITION.get(),
-                        CARRIAGE_DOWN_POSITION.get());
+                    stepCarriageRetract(
+                        carriageTarget[0],
+                        retractPhase,
+                        CARRIAGE_FAST_RETRACT_ROT_PER_SEC.get(),
+                        CARRIAGE_RETRACT_ROT_PER_SEC.get(),
+                        CARRIAGE_RETRACT_SPLIT_POSITION.get());
                 carriage.setDeployPosition(carriageTarget[0]);
               }
 
@@ -272,7 +284,9 @@ public final class ShootCommands {
         .beforeStarting(
             () -> {
               headingController.reset(drive.getRotation().getRadians());
+              omegaFilter.reset();
               carriageTarget[0] = CARRIAGE_DOWN_POSITION.get();
+              retractPhase[0] = 0;
               carriage.setDeployPosition(carriageTarget[0]);
               feedStarted[0] = false;
               lockedHeadingRad[0] = drive.getRotation().getRadians();
@@ -341,9 +355,12 @@ public final class ShootCommands {
                 DriveConstants.AIM_MAX_ACCEL_RAD_PER_SEC2));
     headingController.enableContinuousInput(-Math.PI, Math.PI);
     headingController.setTolerance(Math.toRadians(DriveConstants.AIM_TOLERANCE_DEG.get()));
+    LinearFilter omegaFilter =
+        LinearFilter.singlePoleIIR(DriveConstants.AIM_OMEGA_FILTER_TIME_CONSTANT_SEC, DT);
 
     // Boxed so the run() lambda can mutate it; reset in beforeStarting(). Same roles as autoShoot.
     double[] carriageTarget = {CARRIAGE_DOWN_POSITION.get()};
+    int[] retractPhase = {0};
     boolean[] feedStarted = {false};
     double[] lockedHeadingRad = {0.0};
     Timer feedTimer = new Timer();
@@ -372,7 +389,9 @@ public final class ShootCommands {
                 targetHeading =
                     Math.atan2(target.getY() - robot.getY(), target.getX() - robot.getX())
                         + DriveConstants.AIM_HEADING_OFFSET_RAD;
-                omega = headingController.calculate(drive.getRotation().getRadians(), targetHeading);
+                omega =
+                    omegaFilter.calculate(
+                        headingController.calculate(drive.getRotation().getRadians(), targetHeading));
                 lockedHeadingRad[0] = targetHeading;
               } else {
                 targetHeading = lockedHeadingRad[0];
@@ -409,13 +428,15 @@ public final class ShootCommands {
                 intake.stop();
               }
 
-              boolean retracting = feedStarted[0] && feedTimer.hasElapsed(FEED_DELAY_SEC.get());
+              boolean retracting = feedStarted[0];
               if (retracting) {
                 carriageTarget[0] =
-                    MathUtil.clamp(
-                        carriageTarget[0] - CARRIAGE_RETRACT_ROT_PER_SEC.get() * DT,
-                        CARRIAGE_UP_POSITION.get(),
-                        CARRIAGE_DOWN_POSITION.get());
+                    stepCarriageRetract(
+                        carriageTarget[0],
+                        retractPhase,
+                        CARRIAGE_FAST_RETRACT_ROT_PER_SEC.get(),
+                        CARRIAGE_RETRACT_ROT_PER_SEC.get(),
+                        CARRIAGE_RETRACT_SPLIT_POSITION.get());
                 carriage.setDeployPosition(carriageTarget[0]);
               }
 
@@ -441,7 +462,9 @@ public final class ShootCommands {
         .beforeStarting(
             () -> {
               headingController.reset(drive.getRotation().getRadians());
+              omegaFilter.reset();
               carriageTarget[0] = CARRIAGE_DOWN_POSITION.get();
+              retractPhase[0] = 0;
               carriage.setDeployPosition(carriageTarget[0]);
               feedStarted[0] = false;
               lockedHeadingRad[0] = drive.getRotation().getRadians();
@@ -467,9 +490,10 @@ public final class ShootCommands {
    * under {@code /Tuning/ManualShoot/*} in AdvantageScope.
    *
    * <p>While held: spin the flywheel to {@code MANUAL_SHOOTER_RPS} and set the hood to {@code
-   * MANUAL_HOOD_ROTATIONS}; once at speed + at hood, LATCH the feed (rollers + indexer) on; after
-   * {@code MANUAL_FEED_DELAY_SEC} begin slowly retracting the carriage. On release everything stops,
-   * the hood returns to rest, and the carriage returns to the deployed/down position.
+   * MANUAL_HOOD_ROTATIONS}; once at speed + at hood, LATCH the feed (rollers + indexer) on and
+   * immediately begin the "double compress" retract (see {@link #stepCarriageRetract}). On release
+   * everything stops, the hood returns to rest, and the carriage returns to the deployed/down
+   * position.
    */
   public static Command manualShoot(
       Drive drive, Shooter shooter, Carriage carriage, Rollers rollers, Indexer indexer, Intake intake) {
@@ -481,11 +505,13 @@ public final class ShootCommands {
     // so without this they silently wouldn't show up in AdvantageScope until the first manual shot.
     MANUAL_SHOOTER_RPS.get();
     MANUAL_HOOD_ROTATIONS.get();
-    MANUAL_FEED_DELAY_SEC.get();
+    MANUAL_CARRIAGE_FAST_RETRACT_ROT_PER_SEC.get();
     MANUAL_CARRIAGE_RETRACT_ROT_PER_SEC.get();
+    MANUAL_CARRIAGE_RETRACT_SPLIT_POSITION.get();
 
     // Boxed so the run() lambda can mutate it; reset in beforeStarting().
     double[] carriageTarget = {CARRIAGE_DOWN_POSITION.get()};
+    int[] retractPhase = {0};
     boolean[] feedStarted = {false};
     Timer feedTimer = new Timer();
     Debouncer readyDebouncer = new Debouncer(READY_DEBOUNCE_SEC.get(), DebounceType.kRising);
@@ -531,15 +557,16 @@ public final class ShootCommands {
                 intake.stop();
               }
 
-              // Hold deployed for MANUAL_FEED_DELAY_SEC after feeding began, then slow-retract.
-              boolean retracting =
-                  feedStarted[0] && feedTimer.hasElapsed(MANUAL_FEED_DELAY_SEC.get());
+              // The instant the feed latches, start the "double compress" retract.
+              boolean retracting = feedStarted[0];
               if (retracting) {
                 carriageTarget[0] =
-                    MathUtil.clamp(
-                        carriageTarget[0] - MANUAL_CARRIAGE_RETRACT_ROT_PER_SEC.get() * DT,
-                        CARRIAGE_UP_POSITION.get(),
-                        CARRIAGE_DOWN_POSITION.get());
+                    stepCarriageRetract(
+                        carriageTarget[0],
+                        retractPhase,
+                        MANUAL_CARRIAGE_FAST_RETRACT_ROT_PER_SEC.get(),
+                        MANUAL_CARRIAGE_RETRACT_ROT_PER_SEC.get(),
+                        MANUAL_CARRIAGE_RETRACT_SPLIT_POSITION.get());
                 carriage.setDeployPosition(carriageTarget[0]);
               }
 
@@ -569,6 +596,7 @@ public final class ShootCommands {
         .beforeStarting(
             () -> {
               carriageTarget[0] = CARRIAGE_DOWN_POSITION.get();
+              retractPhase[0] = 0;
               carriage.setDeployPosition(carriageTarget[0]);
               feedStarted[0] = false;
               feedTimer.stop();
@@ -605,5 +633,42 @@ public final class ShootCommands {
       shooter.setShooterMotorVelocity(targetSpeed);
     }
     Logger.recordOutput("Shooter/BangBangMode", useBangBang);
+  }
+
+  /**
+   * "Double compress" carriage retract, one step of it (called once per loop): pull in (fast) to
+   * {@code splitPosition}, push back out (fast) to fully deployed, then pull all the way in to
+   * fully retracted (slow, so it eases in instead of slamming). Three phases tracked via {@code
+   * phase[0]} (0 = pulling to the split point, 1 = pushing back out, 2 = final pull to fully
+   * retracted) since the target is no longer monotonic -- position alone can't tell phase 1 (still
+   * short of fully deployed) from phase 2 passing back through the same split point. Replaces the
+   * old "hold deployed for a fixed delay, then retract at one constant rate" choreography -- this
+   * starts the instant the feed latches, no delay first.
+   */
+  private static double stepCarriageRetract(
+      double currentTarget,
+      int[] phase,
+      double fastRotPerSec,
+      double slowRotPerSec,
+      double splitPosition) {
+    double down = CARRIAGE_DOWN_POSITION.get();
+    double up = CARRIAGE_UP_POSITION.get();
+
+    switch (phase[0]) {
+      case 0 -> {
+        currentTarget = MathUtil.clamp(currentTarget - fastRotPerSec * DT, splitPosition, down);
+        if (currentTarget <= splitPosition) {
+          phase[0] = 1;
+        }
+      }
+      case 1 -> {
+        currentTarget = MathUtil.clamp(currentTarget + fastRotPerSec * DT, splitPosition, down);
+        if (currentTarget >= down) {
+          phase[0] = 2;
+        }
+      }
+      default -> currentTarget = MathUtil.clamp(currentTarget - slowRotPerSec * DT, up, down);
+    }
+    return currentTarget;
   }
 }

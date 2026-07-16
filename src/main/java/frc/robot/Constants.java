@@ -128,16 +128,19 @@ public final class Constants {
     public static final LoggedTunableNumber TARGET_HOOD_ROTATIONS =
         new LoggedTunableNumber("ShootSequence/TargetHoodRotations", 1.0); // bench hood mechanism rot
 
-    // Rate the carriage is slowly retracted while shooting (deploy ROTOR ROTATIONS per second). The
-    // deploy travel is 0..15.5 rotations, so ~4 rot/s empties it in ~4 s — a gentle pull-in.
+    // "Double compress" retract: starts the instant the feed latches (no more holding at full
+    // deploy first) -- pull in (fast) to CARRIAGE_RETRACT_SPLIT_POSITION, push back out (fast) to
+    // DOWN, then pull all the way to UP at this slower rate so it eases in instead of slamming
+    // (deploy ROTOR ROTATIONS/sec).
+    public static final LoggedTunableNumber CARRIAGE_FAST_RETRACT_ROT_PER_SEC =
+        new LoggedTunableNumber("ShootSequence/CarriageFastRetractRotPerSec", 20.0);
     public static final LoggedTunableNumber CARRIAGE_RETRACT_ROT_PER_SEC =
         new LoggedTunableNumber("ShootSequence/CarriageRetractRotPerSec", 15.0);
-
-    // After the flywheel + hood are at their setpoints we start the feed (rollers + indexer); this is
-    // how long we keep feeding BEFORE the carriage begins its slow retract, so the piece is on its way
-    // out before the intake starts pulling in.
-    public static final LoggedTunableNumber FEED_DELAY_SEC =
-        new LoggedTunableNumber("ShootSequence/FeedDelaySec", 0.5);
+    // Carriage position (rotor rotations, same units/frame as CARRIAGE_DOWN_POSITION /
+    // CARRIAGE_UP_POSITION) the first "pull in" leg targets before pushing back out to DOWN and
+    // then pulling all the way to UP. Default = the old 0.6 split fraction's equivalent point.
+    public static final LoggedTunableNumber CARRIAGE_RETRACT_SPLIT_POSITION =
+        new LoggedTunableNumber("ShootSequence/CarriageRetractSplitPosition", 5);
 
     // When TRUE the feed (rollers + indexer) only runs once the chassis has finished aiming at the
     // goal. Set FALSE for bench testing: on a stand the robot can't rotate, so alignment never
@@ -178,7 +181,7 @@ public final class Constants {
     // [HOOD_MIN_ROTATIONS, HOOD_MAX_ROTATIONS]). Near max so the lob clears traffic on the way over
     // midfield; kept a bit below the hard stop (1.7) rather than pinned exactly to it.
     public static final LoggedTunableNumber FEED_HOOD_ROTATIONS =
-        new LoggedTunableNumber("Feed/HoodRotations", 1.5);
+        new LoggedTunableNumber("Feed/HoodRotations", 1.2);
   }
 
   /**
@@ -191,12 +194,17 @@ public final class Constants {
         new LoggedTunableNumber("ManualShoot/ShooterRPS", 50.0); // flywheel rotor rps
     public static final LoggedTunableNumber MANUAL_HOOD_ROTATIONS =
         new LoggedTunableNumber("ManualShoot/HoodRotations", 1.0); // hood mechanism rotations
-    // How long the feed runs before the carriage begins its slow retract (seconds).
-    public static final LoggedTunableNumber MANUAL_FEED_DELAY_SEC =
-        new LoggedTunableNumber("ManualShoot/FeedDelaySec", 1.0);
-    // Carriage slow-retract rate while shooting (deploy rotor rotations per second).
+    // "Double compress" retract, same idea as ShootSequenceConfig's -- starts the instant the feed
+    // latches: pull in (fast) to MANUAL_CARRIAGE_RETRACT_SPLIT_POSITION, push back out (fast) to
+    // DOWN, then pull all the way to UP (slow) (deploy rotor rotations per second).
+    public static final LoggedTunableNumber MANUAL_CARRIAGE_FAST_RETRACT_ROT_PER_SEC =
+        new LoggedTunableNumber("ManualShoot/CarriageFastRetractRotPerSec", 30.0);
     public static final LoggedTunableNumber MANUAL_CARRIAGE_RETRACT_ROT_PER_SEC =
-        new LoggedTunableNumber("ManualShoot/CarriageRetractRotPerSec", 15.0);
+        new LoggedTunableNumber("ManualShoot/CarriageRetractRotPerSec", 20.0);
+    // Carriage position (rotor rotations, same units/frame as CARRIAGE_DOWN_POSITION /
+    // CARRIAGE_UP_POSITION). Default = the old 0.6 split fraction's equivalent point.
+    public static final LoggedTunableNumber MANUAL_CARRIAGE_RETRACT_SPLIT_POSITION =
+        new LoggedTunableNumber("ManualShoot/CarriageRetractSplitPosition", 7.2);
   }
 
   /**
@@ -253,7 +261,7 @@ public final class Constants {
     public static final LoggedTunableNumber CARRIAGE_DOWN_POSITION =
         new LoggedTunableNumber("Carriage/DownPosition", 18.00); // extended / deployed
     public static final LoggedTunableNumber CARRIAGE_UP_POSITION =
-        new LoggedTunableNumber("Carriage/UpPosition", 0.00); // retracted
+        new LoggedTunableNumber("Carriage/UpPosition", 0.7); // retracted
 
     // NOT sim-only: CarriageIOTalonFX uses these to convert rotor rotations <-> meters.
     public static final double CARRIAGE_GEAR_RATIO    = 25.0;
@@ -267,7 +275,7 @@ public final class Constants {
     public static final LoggedTunableNumber CARRIAGE_KA =
         new LoggedTunableNumber("Carriage/kA", 0.0); // V / (rot/s^2)
     public static final LoggedTunableNumber CARRIAGE_KP =
-        new LoggedTunableNumber("Carriage/kP", 3.0); // V / rot
+        new LoggedTunableNumber("Carriage/kP", 5.0); // V / rot
     public static final LoggedTunableNumber CARRIAGE_KI =
         new LoggedTunableNumber("Carriage/kI", 0.0);
     public static final LoggedTunableNumber CARRIAGE_KD =
@@ -289,7 +297,7 @@ public final class Constants {
     public static final int ROLLERS_FOLLOWER_MOTOR_ID = 16;  // freed up from the old carriage follower
 
     public static final LoggedTunableNumber ROLLERS_VELOCITY =
-        new LoggedTunableNumber("Rollers/Velocity", 50.0); // rotor rps
+        new LoggedTunableNumber("Rollers/Velocity", 100.0); // rotor rps
 
     // ---- Velocity loop (VelocityTorqueCurrentFOC, amps/rotor-rps); sim physics in SimConfig ----
     public static final LoggedTunableNumber ROLLERS_KS =
@@ -303,7 +311,7 @@ public final class Constants {
     public static final LoggedTunableNumber ROLLERS_KD =
         new LoggedTunableNumber("Rollers/kD", 0.0);
     public static final LoggedTunableNumber ROLLERS_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Rollers/TorqueCurrentLimit", 100.0);
+        new LoggedTunableNumber("Rollers/TorqueCurrentLimit", 60.0);
   }
 
   public static final class IndexerConfig {
