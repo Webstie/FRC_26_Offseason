@@ -1,6 +1,8 @@
 package frc.robot.subsystems.shooter;
 
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Distance-to-setpoint lookup for the shooter: maps the horizontal distance to the goal (meters)
@@ -45,14 +47,52 @@ public final class ShooterProfile {
     }
   }
 
+  // Temporary bench-tuning offsets, live-adjustable from the driver POV (see RobotContainer): shift
+  // EVERY point on the curve by the same amount, so a systematic long/short or high/low miss on the
+  // field can be corrected on the fly without redeploying code. Zeroed at boot; POV left resets both
+  // back to 0. Remove once the TABLE above is re-calibrated and this is no longer needed.
+  private static double hoodOffsetRot = 0.0;
+  private static double speedOffsetRps = 0.0;
+
+  static {
+    // Publish once at class-load, not just on the first POV press -- otherwise the keys don't exist
+    // in Elastic/NetworkTables until the driver touches a tuning button, and a dashboard opened
+    // before that shows nothing under ShooterProfile/*.
+    logOffsets();
+  }
+
+  public static void adjustHoodOffset(double deltaRot) {
+    hoodOffsetRot += deltaRot;
+    logOffsets();
+  }
+
+  public static void adjustSpeedOffset(double deltaRps) {
+    speedOffsetRps += deltaRps;
+    logOffsets();
+  }
+
+  public static void resetOffsets() {
+    hoodOffsetRot = 0.0;
+    speedOffsetRps = 0.0;
+    logOffsets();
+  }
+
+  private static void logOffsets() {
+    Logger.recordOutput("ShooterProfile/HoodOffsetRot", hoodOffsetRot);
+    Logger.recordOutput("ShooterProfile/SpeedOffsetRps", speedOffsetRps);
+    // Also on SmartDashboard (not just the AdvantageKit log) so it shows up live in Elastic.
+    SmartDashboard.putNumber("ShooterProfile/HoodOffsetRot", hoodOffsetRot);
+    SmartDashboard.putNumber("ShooterProfile/SpeedOffsetRps", speedOffsetRps);
+  }
+
   /** Flywheel speed (rotor rps) for a given goal distance (meters). */
   public static double speedForDistance(double meters) {
-    return lookup(meters, SPEED, COL_SPEED);
+    return lookup(meters, SPEED, COL_SPEED) + speedOffsetRps;
   }
 
   /** Hood position (mechanism rotations) for a given goal distance (meters). */
   public static double hoodRotationsForDistance(double meters) {
-    return lookup(meters, HOOD, COL_HOOD);
+    return lookup(meters, HOOD, COL_HOOD) + hoodOffsetRot;
   }
 
   private static double lookup(double meters, InterpolatingDoubleTreeMap map, int column) {

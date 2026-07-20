@@ -5,12 +5,14 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
 import java.text.DecimalFormat;
@@ -40,8 +42,16 @@ public final class DriveCommands {
           double vy = deadband(ySupplier) * maxV;
           double omega =
               deadband(omegaSupplier) * maxOmega * DriveConstants.TELEOP_ROTATION_SPEED_SCALAR;
-          drive.runVelocity(
-              ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
+          // Operator perspective (mirrors CTRE's setOperatorPerspectiveForward): the pose
+          // estimator's rotation stays the TRUE absolute blue-frame heading (needed for
+          // auto-aim/PathPlanner/vision), so alliance is handled here instead, ONLY for what the
+          // stick considers "forward" -- add 180 deg for red so pushing the stick away from the
+          // driver always drives away from their own alliance wall, on either side of the field.
+          Rotation2d operatorForward =
+              drive
+                  .getRotation()
+                  .plus(FieldConstants.isRedAlliance() ? Rotation2d.k180deg : Rotation2d.kZero);
+          drive.runVelocity(ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, operatorForward));
         },
         drive);
   }

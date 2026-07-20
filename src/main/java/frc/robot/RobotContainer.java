@@ -57,6 +57,7 @@ import frc.robot.subsystems.rollers.RollersIOTalonFX;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterIOSim;
 import frc.robot.subsystems.shooter.ShooterIOTalonFX;
+import frc.robot.subsystems.shooter.ShooterProfile;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
@@ -96,6 +97,8 @@ public class RobotContainer {
 
   private final CommandXboxController m_driverController =
       new CommandXboxController(OperatorConstants.DRIVER_CONTROLLER_PORT);
+  private final CommandXboxController m_operatorController =
+      new CommandXboxController(OperatorConstants.OPERATOR_CONTROLLER_PORT);
   // Built from AutoBuilder.buildAutoChooser() in the constructor (below), which auto-populates
   // with every PathPlannerAuto found in src/main/deploy/pathplanner/autos/ — must run AFTER Drive's
   // constructor, since that's where AutoBuilder.configure() happens.
@@ -330,12 +333,41 @@ public class RobotContainer {
             m_driverController::getLeftX,
             m_driverController::getRightX));
 
-    // Left bumper: make the robot's current heading the new field-forward direction.
+    // POV right: seed the TRUE absolute (blue-frame) heading -- e.g. square the robot against a known
+    // field reference and press this to correct gyro drift. Deliberately NOT alliance-flipped: this
+    // sets the actual odometry rotation that auto-aim/PathPlanner read, so it must stay in the real
+    // blue-origin frame regardless of which alliance you're on. Driver-perspective ("which way feels
+    // like forward on the stick") is handled separately in DriveCommands.joystickDrive and never
+    // touches this value.
     m_driverController
         .povRight()
         .onTrue(
             Commands.runOnce(
                 () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero))));
+
+    // --- Temporary bench-tuning window, on the CO-DRIVER controller (port 1) -----------------------
+    // (remove once ShooterProfile.TABLE is re-calibrated)
+    // Live-shifts the WHOLE distance-interpolated ShooterProfile curve so a systematic long/short or
+    // high/low miss can be corrected on the field without redeploying: POV up/down nudge the hood
+    // curve, Start/Back nudge the speed curve, POV left resets both offsets to zero.
+    //
+    // Force ShooterProfile's static init (and its first NT/Elastic publish) to run NOW instead of
+    // waiting for the first POV press or the first shot -- same reason ShootCommands.manualShoot()
+    // eagerly touches its own tunables once outside the lambda.
+    ShooterProfile.resetOffsets();
+    m_operatorController
+        .povUp()
+        .onTrue(Commands.runOnce(() -> ShooterProfile.adjustHoodOffset(0.05)));
+    m_operatorController
+        .povDown()
+        .onTrue(Commands.runOnce(() -> ShooterProfile.adjustHoodOffset(-0.05)));
+    m_operatorController
+        .start()
+        .onTrue(Commands.runOnce(() -> ShooterProfile.adjustSpeedOffset(0.5)));
+    m_operatorController
+        .back()
+        .onTrue(Commands.runOnce(() -> ShooterProfile.adjustSpeedOffset(-0.5)));
+    m_operatorController.povLeft().onTrue(Commands.runOnce(ShooterProfile::resetOffsets));
 
     // A: toggle intake deploy. Deploying (out) auto-starts the rollers; retracting (in) auto-stops
     // them.
