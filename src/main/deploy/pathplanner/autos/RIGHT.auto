@@ -1,0 +1,67 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Start"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "First"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "First Pass"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "First Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Second"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Second Pass"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Second Shoot"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
