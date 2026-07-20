@@ -48,11 +48,6 @@ public class Shooter extends SubsystemBase {
     io.setVelocity(rps);
   }
 
-  /** Same setpoint, but driven by a bang-bang controller instead of the closed velocity loop. */
-  public void setShooterMotorVelocityBangBang(double rps) {
-    io.setVelocityBangBang(rps);
-  }
-
   /** Coast the flywheel: it spins down on its own inertia instead of the motors braking it. */
   public void stopShooter() {
     io.stop();

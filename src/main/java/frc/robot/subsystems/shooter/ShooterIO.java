@@ -22,14 +22,6 @@ public interface ShooterIO {
   /** Run the shooter flywheel at the given rotor velocity (rps) with the closed velocity loop. */
   default void setVelocity(double rps) {}
 
-  /**
-   * Run the shooter flywheel at the given rotor velocity (rps) with a bang-bang controller instead
-   * of the closed velocity loop: full torque current while below {@code rps}, feedforward-only once
-   * at/above it. Requires the flywheel to coast in neutral (see {@code NeutralMode.Coast} above) —
-   * bang-bang only ever pushes forward, so a braking neutral mode would fight it.
-   */
-  default void setVelocityBangBang(double rps) {}
-
   /** Drive the hood pivot to the given position (mechanism rotations), MotionMagic position control. */
   default void setHoodPosition(double rotations) {}
 

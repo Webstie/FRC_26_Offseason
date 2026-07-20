@@ -22,7 +22,6 @@ import static frc.robot.Constants.ShootSequenceConfig.CARRIAGE_RETRACT_ROT_PER_S
 import static frc.robot.Constants.ShootSequenceConfig.CARRIAGE_RETRACT_SPLIT_POSITION;
 import static frc.robot.Constants.ShootSequenceConfig.READY_DEBOUNCE_SEC;
 import static frc.robot.Constants.ShootSequenceConfig.REQUIRE_ALIGNED_TO_FEED;
-import static frc.robot.Constants.ShootSequenceConfig.SHOOTER_CONTROL_MODE_DISTANCE_M;
 import static frc.robot.Constants.ShootSequenceConfig.TARGET_HOOD_ROTATIONS;
 import static frc.robot.Constants.ShootSequenceConfig.USE_DISTANCE_PROFILE;
 import static frc.robot.Constants.ShooterConfig.HOOD_MAX_ROTATIONS;
@@ -169,7 +168,7 @@ public final class ShootCommands {
               }
 
               // --- Pre-spin flywheel + adjust hood (always, while held) ---
-              driveFlywheel(shooter, targetSpeed, distance);
+              shooter.setShooterMotorVelocity(targetSpeed);
               shooter.setHoodPosition(targetHood);
 
               // --- Turn to face the goal; driver keeps field-relative translation ---
@@ -531,7 +530,7 @@ public final class ShootCommands {
                   FieldConstants.distanceToGoal(drive.getPose().getTranslation());
 
               // --- Pre-spin flywheel + adjust hood (always, while held) ---
-              driveFlywheel(shooter, targetSpeed, distance);
+              shooter.setShooterMotorVelocity(targetSpeed);
               shooter.setHoodPosition(targetHood);
 
               // --- Readiness gate: no alignment, just at-speed + at-hood ---
@@ -617,22 +616,6 @@ public final class ShootCommands {
   /** Deadbanded, sign-corrected stick value in [-1, 1] (matches DriveCommands). */
   private static double deadband(DoubleSupplier stick) {
     return -MathUtil.applyDeadband(stick.getAsDouble(), DriveConstants.JOYSTICK_DEADBAND);
-  }
-
-  /**
-   * Drive the flywheel to {@code targetSpeed}: below {@code SHOOTER_CONTROL_MODE_DISTANCE_M} use the
-   * closed velocity loop (smoother — best when a steady setpoint matters most, i.e. close shots);
-   * at/above it switch to bang-bang control, which recovers to setpoint faster after a disturbance
-   * (e.g. the higher speeds long shots need, or a ball dipping the flywheel mid-feed).
-   */
-  private static void driveFlywheel(Shooter shooter, double targetSpeed, double distance) {
-    boolean useBangBang = distance >= SHOOTER_CONTROL_MODE_DISTANCE_M.get();
-    if (useBangBang) {
-      shooter.setShooterMotorVelocityBangBang(targetSpeed);
-    } else {
-      shooter.setShooterMotorVelocity(targetSpeed);
-    }
-    Logger.recordOutput("Shooter/BangBangMode", useBangBang);
   }
 
   /**

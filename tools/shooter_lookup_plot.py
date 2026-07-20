@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Plot the shooter distance->setpoint lookup tables.
+"""Plot the shooter distance->setpoint lookup table.
 
 Renders flywheel speed vs. distance and hood position vs. distance, and writes a CSV of the
-finely-interpolated curve. The tables here MUST stay in sync with
-`src/main/java/frc/robot/subsystems/shooter/ShooterProfile.java`: linear interpolation within each
-table, split at the flywheel control-mode switchover distance (PID below, bang-bang at/above), and
-linear EXTRAPOLATION (not clamping) beyond the overall min/max distance, along the slope of the two
-nearest points.
+finely-interpolated curve. The table here MUST stay in sync with
+`src/main/java/frc/robot/subsystems/shooter/ShooterProfile.java`: linear interpolation within the
+table, and linear EXTRAPOLATION (not clamping) beyond the overall min/max distance, along the slope
+of the two nearest points.
 
 Usage:
     python tools/shooter_lookup_plot.py            # writes PNG + CSV next to this script
@@ -19,21 +18,14 @@ import os
 
 import numpy as np
 
-# {distance_m, speed_rps, hood_rotations} -- keep in sync with ShooterProfile.PID_TABLE /
-# ShooterProfile.BANGBANG_TABLE. The switchover distance (2.25) is duplicated as the last row of
-# PID_TABLE and the first row of BANGBANG_TABLE, same as the Java side.
-PID_TABLE = [
-    (1.25, 45.0, 0.2),
-    (1.75, 47.5, 0.4),
-    (2.25, 50.0, 0.53),
+# {distance_m, speed_rps, hood_rotations} -- keep in sync with ShooterProfile.TABLE.
+TABLE = [
+    (1.25, 47.5, 0.4),
+    (1.75, 50.0, 0.5),
+    (2.25, 51.0, 0.6),
+    (3.0, 52.0, 0.7),
+    (3.75, 52.0, 0.7),
 ]
-BANGBANG_TABLE = [
-    (2.25, 50.0, 0.53),
-    (2.50, 52.5, 0.63),
-    (3.00, 50.0, 0.68),
-    (3.50, 50.0, 0.68),
-]
-TABLE = PID_TABLE[:-1] + BANGBANG_TABLE  # de-duplicated, full curve, for plotting/CSV export
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,7 +74,6 @@ def main():
     ax_speed.plot(fine[in_range], speed_fine[in_range], "-", color="tab:blue", label="interpolated")
     ax_speed.plot(fine[~in_range], speed_fine[~in_range], "--", color="tab:blue", label="extrapolated")
     ax_speed.plot(dist, speed, "o", color="tab:blue", label="table points")
-    ax_speed.axvline(BANGBANG_TABLE[0][0], color="gray", linestyle=":", alpha=0.6, label="PID/bang-bang switchover")
     ax_speed.set_title("Flywheel speed vs. distance")
     ax_speed.set_xlabel("Distance to goal (m)")
     ax_speed.set_ylabel("Flywheel speed (rotor rps)")
@@ -92,7 +83,6 @@ def main():
     ax_hood.plot(fine[in_range], hood_fine[in_range], "-", color="tab:orange", label="interpolated")
     ax_hood.plot(fine[~in_range], hood_fine[~in_range], "--", color="tab:orange", label="extrapolated")
     ax_hood.plot(dist, hood, "o", color="tab:orange", label="table points")
-    ax_hood.axvline(BANGBANG_TABLE[0][0], color="gray", linestyle=":", alpha=0.6, label="PID/bang-bang switchover")
     ax_hood.set_title("Hood position vs. distance")
     ax_hood.set_xlabel("Distance to goal (m)")
     ax_hood.set_ylabel("Hood position (rotations)")

@@ -71,7 +71,7 @@ public final class Constants {
 
     // "At speed" gate for the auto-shoot sequence (how close the flywheel must be before feeding).
     public static final LoggedTunableNumber SHOOTER_VELOCITY_TOLERANCE_RPS =
-        new LoggedTunableNumber("Shooter/VelocityToleranceRPS", 4.0);
+        new LoggedTunableNumber("Shooter/VelocityToleranceRPS", 2.0);
 
     // ---- Hood pivot: one TalonFX + one fused CANcoder, MotionMagicVoltage position control ----
     // Lives inside the Shooter subsystem (hood + flywheel are one physical mechanism). The CANcoder
@@ -147,15 +147,6 @@ public final class Constants {
     // completes and the feed would never fire — with this false it feeds as soon as the flywheel and
     // hood are at their setpoints. Keep TRUE on the field so it only shoots while on target.
     public static final boolean REQUIRE_ALIGNED_TO_FEED = true;
-
-    // Flywheel control-mode switch: below this distance (meters) drive the flywheel with the closed
-    // velocity loop (VelocityTorqueCurrentFOC, smooth/precise — good for close shots where a steady
-    // setpoint matters most); at/above it switch to bang-bang (max-effort) control, which recovers
-    // to the (higher, long-range) setpoint faster than the PID loop after a disturbance. Placeholder
-    // threshold — tune on the field.
-    public static final LoggedTunableNumber SHOOTER_CONTROL_MODE_DISTANCE_M =
-        new LoggedTunableNumber("ShootSequence/ControlModeDistanceM", 2.25
-        );
 
     // "At speed" and "at hood" must hold true continuously for this long before the feed latches on
     // (mirrors Team 254's on-target sample-count technique) -- a single noisy loop tick briefly
@@ -370,7 +361,7 @@ public final class Constants {
     // ---- Per-action colors, in the priority order Leds evaluates them ----
     public static final RGBWColor COLOR_AUTO_SHOOT = new RGBWColor(255, 60, 0); // orange - right trigger
     public static final RGBWColor COLOR_MANUAL_SHOOT = new RGBWColor(0, 80, 255); // blue - left trigger
-    public static final RGBWColor COLOR_OUTTAKE = new RGBWColor(255, 0, 0); // red - Y
+    public static final RGBWColor COLOR_OUTTAKE = new RGBWColor(255, 0, 0); // red - Y*////
     public static final RGBWColor COLOR_INTAKE_SPIN = new RGBWColor(0, 255, 0); // spring green - B (spin only)
   }
 

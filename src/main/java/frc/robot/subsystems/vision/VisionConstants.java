@@ -56,10 +56,19 @@ public final class VisionConstants {
   public static final LoggedTunableNumber MAX_Z_ERROR =
       new LoggedTunableNumber("Vision/MaxZErrorMeters", 0.75); // reject estimates floating/sinking more than this
   // Standard-deviation baselines, defined for a 1 m average tag distance and a single tag.
+  // TEMP 10x bump (0.02->0.2, 0.06->0.6) to test the close-range-overtrust jitter theory: sim spawns
+  // the robot a few meters from tags, so stdDevFactor = distance^2/tagCount was landing small enough
+  // that each frame's noisy PhotonVisionSim solve got fused in at near-full trust, visibly hopping
+  // the estimated pose every ~20ms even at rest. If bumping this makes the idle pose jitter in
+  // AdvantageScope go away, that confirms it and these should come back down to a tuned middle
+  // ground (not necessarily all the way back to 0.02/0.06) rather than staying at 10x. Both are
+  // LoggedTunableNumbers (TUNING_MODE=true) so this can also just be dragged live in Elastic under
+  // "Tuning/Vision/*" without a redeploy -- only bumping the code default here so it survives a sim
+  // restart during testing.
   public static final LoggedTunableNumber LINEAR_STD_DEV_BASELINE =
-      new LoggedTunableNumber("Vision/LinearStdDevBaseline", 0.02); // meters
+      new LoggedTunableNumber("Vision/LinearStdDevBaseline", 0.2); // meters
   public static final LoggedTunableNumber ANGULAR_STD_DEV_BASELINE =
-      new LoggedTunableNumber("Vision/AngularStdDevBaseline", 0.06); // radians
+      new LoggedTunableNumber("Vision/AngularStdDevBaseline", 0.6); // radians
 
   // Trust degrades further while the chassis translates/rotates fast (motion blur, rolling shutter
   // skew, and vision-to-odometry timestamp mismatch all worsen in motion). Kept as TWO SEPARATE

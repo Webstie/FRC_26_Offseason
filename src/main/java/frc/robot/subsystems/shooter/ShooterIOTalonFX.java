@@ -11,7 +11,6 @@ import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.NeutralOut;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -21,7 +20,6 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.BangBangController;
 
 public class ShooterIOTalonFX implements ShooterIO {
 
@@ -39,11 +37,6 @@ public class ShooterIOTalonFX implements ShooterIO {
   private final VelocityTorqueCurrentFOC request = new VelocityTorqueCurrentFOC(0).withSlot(0);
   private final MotionMagicVoltage hoodRequest = new MotionMagicVoltage(0).withSlot(0);
   private final NeutralOut neutralRequest = new NeutralOut();
-
-  // Bang-bang path: open-loop torque-current request, driven by a WPILib BangBangController plus a
-  // kS/kV feedforward (same gains as the closed loop, just evaluated by hand) instead of Slot0.
-  private final BangBangController bangBangController = new BangBangController();
-  private final TorqueCurrentFOC bangBangRequest = new TorqueCurrentFOC(0);
 
   public ShooterIOTalonFX() {
     var cfg = new TalonFXConfiguration();
@@ -119,19 +112,6 @@ public class ShooterIOTalonFX implements ShooterIO {
   @Override
   public void setVelocity(double rps) {
     leftUpMotor.setControl(request.withVelocity(rps));
-  }
-
-  @Override
-  public void setVelocityBangBang(double rps) {
-    // WPILib's recommended pattern (see docs): full effort while below setpoint, feedforward-only
-    // once at/above it, scaled by 0.9 so the feedforward alone doesn't overshoot the setpoint —
-    // the bang-bang term can only ever add MORE current, never less.
-    double measuredRPS = leftUpMotor.getVelocity().getValueAsDouble();
-    double feedforwardAmps = SHOOTER_KS.get() + SHOOTER_KV.get() * rps;
-    double outputAmps =
-        bangBangController.calculate(measuredRPS, rps) * SHOOTER_TORQUE_CURRENT_LIMIT.get()
-            + 0.9 * feedforwardAmps;
-    leftUpMotor.setControl(bangBangRequest.withOutput(outputAmps));
   }
 
   @Override
