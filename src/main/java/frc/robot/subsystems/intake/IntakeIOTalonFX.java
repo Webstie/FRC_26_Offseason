@@ -3,6 +3,7 @@ package frc.robot.subsystems.intake;
 import static frc.robot.Constants.IntakeConfig.*;
 
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.SlotConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
@@ -27,6 +28,8 @@ public class IntakeIOTalonFX implements IntakeIO {
     rollerCfg.Slot0.kP = INTAKE_KP.get();
     rollerCfg.TorqueCurrent.PeakForwardTorqueCurrent =  INTAKE_TORQUE_CURRENT_LIMIT.get();
     rollerCfg.TorqueCurrent.PeakReverseTorqueCurrent = -INTAKE_TORQUE_CURRENT_LIMIT.get();
+    rollerCfg.CurrentLimits.SupplyCurrentLimit = INTAKE_SUPPLY_CURRENT_LIMIT.get();
+    rollerCfg.CurrentLimits.SupplyCurrentLimitEnable = true;
     leftMotor.getConfigurator().apply(rollerCfg);
     rightMotor.getConfigurator().apply(rollerCfg);
 
@@ -63,6 +66,15 @@ public class IntakeIOTalonFX implements IntakeIO {
     var limit = new TorqueCurrentConfigs();
     limit.PeakForwardTorqueCurrent = amps;
     limit.PeakReverseTorqueCurrent = -amps;
+    leftMotor.getConfigurator().apply(limit);
+    rightMotor.getConfigurator().apply(limit);
+  }
+
+  @Override
+  public void setSupplyCurrentLimit(double amps) {
+    var limit = new CurrentLimitsConfigs();
+    limit.SupplyCurrentLimit = amps;
+    limit.SupplyCurrentLimitEnable = true;
     leftMotor.getConfigurator().apply(limit);
     rightMotor.getConfigurator().apply(limit);
   }

@@ -68,7 +68,9 @@ public final class Constants {
     public static final LoggedTunableNumber SHOOTER_KD =
         new LoggedTunableNumber("Shooter/kD", 0.0);
     public static final LoggedTunableNumber SHOOTER_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Shooter/TorqueCurrentLimit", 60.0); // A
+        new LoggedTunableNumber("Shooter/TorqueCurrentLimit", 40.0); // A
+    public static final LoggedTunableNumber SHOOTER_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Shooter/SupplyCurrentLimit", 30.0); // A
 
     // "At speed" gate for the auto-shoot sequence (how close the flywheel must be before feeding).
     public static final LoggedTunableNumber SHOOTER_VELOCITY_TOLERANCE_RPS =
@@ -239,6 +241,8 @@ public final class Constants {
         new LoggedTunableNumber("Intake/kD", 0.0);
     public static final LoggedTunableNumber INTAKE_TORQUE_CURRENT_LIMIT =
         new LoggedTunableNumber("Intake/TorqueCurrentLimit", 40.0); // A, peak |torque current|
+    public static final LoggedTunableNumber INTAKE_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Intake/SupplyCurrentLimit", 20.0); // A
   }
 
   /** Carriage deploy slide (the linear mechanism that extends/retracts the intake). */
@@ -304,6 +308,8 @@ public final class Constants {
         new LoggedTunableNumber("Rollers/kD", 0.0);
     public static final LoggedTunableNumber ROLLERS_TORQUE_CURRENT_LIMIT =
         new LoggedTunableNumber("Rollers/TorqueCurrentLimit", 30.0);
+    public static final LoggedTunableNumber ROLLERS_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Rollers/SupplyCurrentLimit", 20.0); // A
   }
 
   public static final class IndexerConfig {
@@ -325,7 +331,9 @@ public final class Constants {
     public static final LoggedTunableNumber INDEXER_KD =
         new LoggedTunableNumber("Indexer/kD", 0.0);
     public static final LoggedTunableNumber INDEXER_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Indexer/TorqueCurrentLimit", 40.0);
+        new LoggedTunableNumber("Indexer/TorqueCurrentLimit", 30.0);
+    public static final LoggedTunableNumber INDEXER_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Indexer/SupplyCurrentLimit", 20.0); // A
   }
 
   /**

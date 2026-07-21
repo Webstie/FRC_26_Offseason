@@ -197,8 +197,12 @@ public final class ShootCommands {
                 double maxV = drive.getMaxLinearSpeedMetersPerSec();
                 double vx = deadband(xSupplier) * maxV;
                 double vy = deadband(ySupplier) * maxV;
+                // Operator perspective for the STICK only (see FieldConstants.operatorForward) --
+                // the heading PID above still aims off the true rotation, this just keeps "push
+                // stick forward" meaning "away from your own alliance wall" while shooting on red.
                 drive.runVelocity(
-                    ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
+                    ChassisSpeeds.fromFieldRelativeSpeeds(
+                        vx, vy, omega, FieldConstants.operatorForward(drive.getRotation())));
               }
 
               // --- Readiness gate (alignment optional; see REQUIRE_ALIGNED_TO_FEED) ---
@@ -399,8 +403,11 @@ public final class ShootCommands {
               double maxV = drive.getMaxLinearSpeedMetersPerSec();
               double vx = deadband(xSupplier) * maxV;
               double vy = deadband(ySupplier) * maxV;
+              // Operator perspective for the STICK only (see FieldConstants.operatorForward) -- the
+              // heading PID above still aims off the true rotation.
               drive.runVelocity(
-                  ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
+                  ChassisSpeeds.fromFieldRelativeSpeeds(
+                      vx, vy, omega, FieldConstants.operatorForward(drive.getRotation())));
 
               // --- Readiness gate: always require alignment (no bench-mode toggle for feed) ---
               headingController.setTolerance(Math.toRadians(DriveConstants.AIM_TOLERANCE_DEG.get()));

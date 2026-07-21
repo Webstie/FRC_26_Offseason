@@ -369,6 +369,29 @@ public class RobotContainer {
         .onTrue(Commands.runOnce(() -> ShooterProfile.adjustSpeedOffset(-0.5)));
     m_operatorController.povLeft().onTrue(Commands.runOnce(ShooterProfile::resetOffsets));
 
+    // Operator A: manual safety-valve toggle for drive supply current limit (30A <-> 60A). Stator
+    // stays at the teleop value (30A) either way -- see DriveConstants.DRIVE_SUPPLY_BOOST_LIMIT's
+    // javadoc, supply alone can't exceed what stator allows through, so this is a narrow escape
+    // hatch, not a real power boost, until/unless stator is raised too.
+    boolean[] driveSupplyBoosted = {false};
+    // Elastic indicator: true = normal (30A), false = boosted (60A) -- published once now so the
+    // key exists on the dashboard before the first A press (see ShooterProfile's tuning-window
+    // offsets for why: a key only created on first use doesn't show up in Elastic if opened first).
+    SmartDashboard.putBoolean("Drive Supply Normal (30A)", true);
+    m_operatorController
+        .a()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  driveSupplyBoosted[0] = !driveSupplyBoosted[0];
+                  drive.setDriveCurrentLimit(
+                      DriveConstants.DRIVE_TELEOP_STATOR_CURRENT_LIMIT.get(),
+                      driveSupplyBoosted[0]
+                          ? DriveConstants.DRIVE_SUPPLY_BOOST_LIMIT.get()
+                          : DriveConstants.DRIVE_TELEOP_SUPPLY_CURRENT_LIMIT.get());
+                  SmartDashboard.putBoolean("Drive Supply Normal (30A)", !driveSupplyBoosted[0]);
+                }));
+
     // A: toggle intake deploy. Deploying (out) auto-starts the rollers; retracting (in) auto-stops
     // them.
     m_driverController

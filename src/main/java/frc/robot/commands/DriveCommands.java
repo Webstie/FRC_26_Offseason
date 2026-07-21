@@ -42,15 +42,10 @@ public final class DriveCommands {
           double vy = deadband(ySupplier) * maxV;
           double omega =
               deadband(omegaSupplier) * maxOmega * DriveConstants.TELEOP_ROTATION_SPEED_SCALAR;
-          // Operator perspective (mirrors CTRE's setOperatorPerspectiveForward): the pose
-          // estimator's rotation stays the TRUE absolute blue-frame heading (needed for
-          // auto-aim/PathPlanner/vision), so alliance is handled here instead, ONLY for what the
-          // stick considers "forward" -- add 180 deg for red so pushing the stick away from the
-          // driver always drives away from their own alliance wall, on either side of the field.
-          Rotation2d operatorForward =
-              drive
-                  .getRotation()
-                  .plus(FieldConstants.isRedAlliance() ? Rotation2d.k180deg : Rotation2d.kZero);
+          // Operator perspective: see FieldConstants.operatorForward's javadoc. Every field-relative
+          // joystick drive call must go through this -- ShootCommands' translation-while-aiming does
+          // too, so a driver holding the shoot trigger doesn't get mirrored controls on red.
+          Rotation2d operatorForward = FieldConstants.operatorForward(drive.getRotation());
           drive.runVelocity(ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, operatorForward));
         },
         drive);

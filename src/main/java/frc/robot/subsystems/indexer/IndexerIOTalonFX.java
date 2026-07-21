@@ -3,6 +3,7 @@ package frc.robot.subsystems.indexer;
 import static frc.robot.Constants.IndexerConfig.*;
 
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
@@ -25,6 +26,8 @@ public class IndexerIOTalonFX implements IndexerIO {
     cfg.Slot0.kP = INDEXER_KP.get();
     cfg.TorqueCurrent.PeakForwardTorqueCurrent =  INDEXER_TORQUE_CURRENT_LIMIT.get();
     cfg.TorqueCurrent.PeakReverseTorqueCurrent = -INDEXER_TORQUE_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimit = INDEXER_SUPPLY_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
     leaderMotor.getConfigurator().apply(cfg);
     followerMotor.getConfigurator().apply(cfg);
 
@@ -67,6 +70,15 @@ public class IndexerIOTalonFX implements IndexerIO {
     var limit = new TorqueCurrentConfigs();
     limit.PeakForwardTorqueCurrent = amps;
     limit.PeakReverseTorqueCurrent = -amps;
+    leaderMotor.getConfigurator().apply(limit);
+    followerMotor.getConfigurator().apply(limit);
+  }
+
+  @Override
+  public void setSupplyCurrentLimit(double amps) {
+    var limit = new CurrentLimitsConfigs();
+    limit.SupplyCurrentLimit = amps;
+    limit.SupplyCurrentLimitEnable = true;
     leaderMotor.getConfigurator().apply(limit);
     followerMotor.getConfigurator().apply(limit);
   }

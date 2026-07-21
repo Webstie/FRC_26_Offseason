@@ -39,6 +39,21 @@ public final class DriveConstants {
   // Full stick deflection maps to this fraction of max angular speed (translation is unaffected).
   public static final double TELEOP_ROTATION_SPEED_SCALAR = 0.5;
 
+  // ---- Drive current limit: teleop baseline + manual boost (no auto-switching -- see
+  // Drive.setDriveCurrentLimit's javadoc; this used to be a DriverStation-triggered auto/teleop
+  // switch, removed in favor of a purely manual operator button, no Trigger involved). ----
+  public static final LoggedTunableNumber DRIVE_TELEOP_STATOR_CURRENT_LIMIT =
+      new LoggedTunableNumber("Drive/TeleopStatorCurrentLimit", 30.0); // A
+  public static final LoggedTunableNumber DRIVE_TELEOP_SUPPLY_CURRENT_LIMIT =
+      new LoggedTunableNumber("Drive/TeleopSupplyCurrentLimit", 30.0); // A
+
+  // Manual safety-valve boost, operator A button (RobotContainer): toggles teleop drive supply
+  // between the normal value above and this one. Stator is NOT raised alongside it -- note that
+  // means this boost mostly does nothing while stator stays capped at 30A (supply naturally can't
+  // exceed what stator delivers), since it's only requested as a supply-only toggle for now.
+  public static final LoggedTunableNumber DRIVE_SUPPLY_BOOST_LIMIT =
+      new LoggedTunableNumber("Drive/SupplyBoostLimit", 30.0); // A
+
   // ---- Auto-aim: profiled heading controller that turns the robot to face the alliance goal ----
   // Profiled (trapezoidal) so the turn eases in/out instead of slamming to max speed and oscillating.
   public static final double AIM_KP = 5.0; // tune on your robot

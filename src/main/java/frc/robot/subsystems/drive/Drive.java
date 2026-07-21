@@ -158,6 +158,20 @@ public class Drive extends SubsystemBase {
         this);
   }
 
+  /**
+   * Live-update every module's drive-motor stator and supply current limits (amps). No automatic
+   * caller -- purely manual, currently only invoked by RobotContainer's operator A-button toggle.
+   */
+  public void setDriveCurrentLimit(double statorAmps, double supplyAmps) {
+    for (var module : modules) {
+      module.setDriveCurrentLimit(statorAmps, supplyAmps);
+    }
+    // Logged so a current-limit change is independently verifiable from AdvantageScope instead of
+    // just trusted -- each entry here is a timestamped proof it actually fired with these values.
+    Logger.recordOutput("Drive/AppliedStatorCurrentLimitA", statorAmps);
+    Logger.recordOutput("Drive/AppliedSupplyCurrentLimitA", supplyAmps);
+  }
+
   @Override
   public void periodic() {
     odometryLock.lock(); // Prevents odometry updates while reading data
