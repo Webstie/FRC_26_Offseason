@@ -24,4 +24,7 @@ public interface IndexerIO {
 
   /** Live-update the peak torque-current limit (amps). */
   default void setCurrentLimit(double amps) {}
+
+  /** Live-update the supply-side (battery-draw) current limit (amps). */
+  default void setSupplyCurrentLimit(double amps) {}
 }

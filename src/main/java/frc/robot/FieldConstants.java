@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -73,5 +74,25 @@ public final class FieldConstants {
   /** Horizontal distance (meters) from a robot translation to the nearest feed corner. */
   public static double distanceToFeedCorner(Translation2d robot) {
     return robot.getDistance(nearestFeedCorner(robot));
+  }
+
+  /**
+   * Adds the alliance-based "operator perspective" offset to a TRUE absolute (blue-frame) heading:
+   * blue sees downfield as 0 rad, red as 180 rad (mirrors CTRE's {@code
+   * setOperatorPerspectiveForward}). Use this ONLY for interpreting what the driver's stick
+   * considers "forward" in field-relative driving -- e.g. as the reference angle passed to {@code
+   * ChassisSpeeds.fromFieldRelativeSpeeds}. NEVER use it for the pose estimator's actual rotation
+   * (that must stay the true blue-frame value for auto-aim / PathPlanner to work), and never for
+   * chassis-rotation targets computed from field geometry (e.g. the auto-aim heading PID) --
+   * those already come out correctly mirrored via {@link #goal()} / {@link #nearestFeedCorner}.
+   *
+   * <p>Every place that drives the chassis field-relative off a live joystick MUST go through this
+   * (or hand-roll the same offset) -- missing one is exactly how a driver ends up with mirrored
+   * controls on red for that one action while everything else is fine. Known call sites: {@code
+   * DriveCommands.joystickDrive} (default teleop drive) and {@code ShootCommands.autoShoot}/{@code
+   * feed} (translation while aiming/shooting).
+   */
+  public static Rotation2d operatorForward(Rotation2d trueHeading) {
+    return trueHeading.plus(isRedAlliance() ? Rotation2d.k180deg : Rotation2d.kZero);
   }
 }

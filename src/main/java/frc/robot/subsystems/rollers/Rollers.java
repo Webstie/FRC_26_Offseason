@@ -30,6 +30,11 @@ public class Rollers extends SubsystemBase {
         hashCode() + 1,
         () -> io.setCurrentLimit(ROLLERS_TORQUE_CURRENT_LIMIT.get()),
         ROLLERS_TORQUE_CURRENT_LIMIT);
+
+    LoggedTunableNumber.ifChanged(
+        hashCode() + 2,
+        () -> io.setSupplyCurrentLimit(ROLLERS_SUPPLY_CURRENT_LIMIT.get()),
+        ROLLERS_SUPPLY_CURRENT_LIMIT);
   }
 
   public void setRollersMotorVelocity(double rps) {

@@ -5,12 +5,14 @@
 package frc.robot.commands;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
 import java.text.DecimalFormat;
@@ -40,8 +42,11 @@ public final class DriveCommands {
           double vy = deadband(ySupplier) * maxV;
           double omega =
               deadband(omegaSupplier) * maxOmega * DriveConstants.TELEOP_ROTATION_SPEED_SCALAR;
-          drive.runVelocity(
-              ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation()));
+          // Operator perspective: see FieldConstants.operatorForward's javadoc. Every field-relative
+          // joystick drive call must go through this -- ShootCommands' translation-while-aiming does
+          // too, so a driver holding the shoot trigger doesn't get mirrored controls on red.
+          Rotation2d operatorForward = FieldConstants.operatorForward(drive.getRotation());
+          drive.runVelocity(ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, operatorForward));
         },
         drive);
   }

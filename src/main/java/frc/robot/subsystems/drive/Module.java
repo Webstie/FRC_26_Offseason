@@ -87,6 +87,11 @@ public class Module {
     io.setTurnOpenLoop(0.0);
   }
 
+  /** Live-update the drive motor's stator and supply current limits (amps). */
+  public void setDriveCurrentLimit(double statorAmps, double supplyAmps) {
+    io.setDriveCurrentLimit(statorAmps, supplyAmps);
+  }
+
   /** Returns the current turn angle of the module. */
   public Rotation2d getAngle() {
     return inputs.turnPosition;

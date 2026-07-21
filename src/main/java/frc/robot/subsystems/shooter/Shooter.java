@@ -31,6 +31,11 @@ public class Shooter extends SubsystemBase {
         () -> io.setCurrentLimit(SHOOTER_TORQUE_CURRENT_LIMIT.get()),
         SHOOTER_TORQUE_CURRENT_LIMIT);
 
+    LoggedTunableNumber.ifChanged(
+        hashCode() + 4,
+        () -> io.setSupplyCurrentLimit(SHOOTER_SUPPLY_CURRENT_LIMIT.get()),
+        SHOOTER_SUPPLY_CURRENT_LIMIT);
+
     // Re-apply gains to the hood controller whenever any tunable changes.
     LoggedTunableNumber.ifChanged(
         hashCode() + 2,

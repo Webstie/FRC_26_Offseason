@@ -4,6 +4,7 @@ import static frc.robot.Constants.ShooterConfig.*;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -45,6 +46,8 @@ public class ShooterIOTalonFX implements ShooterIO {
     cfg.Slot0.kP = SHOOTER_KP.get();
     cfg.TorqueCurrent.PeakForwardTorqueCurrent =  SHOOTER_TORQUE_CURRENT_LIMIT.get();
     cfg.TorqueCurrent.PeakReverseTorqueCurrent = -SHOOTER_TORQUE_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimit = SHOOTER_SUPPLY_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
     // Flywheel coasts in neutral (on stop() and when disabled) so it spins down on its own MOI
     // instead of the motors braking it.
     cfg.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -148,6 +151,17 @@ public class ShooterIOTalonFX implements ShooterIO {
     limit.PeakForwardTorqueCurrent = amps;
     limit.PeakReverseTorqueCurrent = -amps;
     leftUpMotor.getConfigurator().apply(limit);
+  }
+
+  @Override
+  public void setSupplyCurrentLimit(double amps) {
+    var limit = new CurrentLimitsConfigs();
+    limit.SupplyCurrentLimit = amps;
+    limit.SupplyCurrentLimitEnable = true;
+    leftUpMotor.getConfigurator().apply(limit);
+    leftDownMotor.getConfigurator().apply(limit);
+    rightUpMotor.getConfigurator().apply(limit);
+    rightDownMotor.getConfigurator().apply(limit);
   }
 
   @Override

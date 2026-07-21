@@ -31,6 +31,9 @@ public interface ShooterIO {
   /** Live-update the flywheel peak torque-current limit (amps). */
   default void setCurrentLimit(double amps) {}
 
+  /** Live-update the flywheel supply-side (battery-draw) current limit (amps). */
+  default void setSupplyCurrentLimit(double amps) {}
+
   /** Live-update the hood MotionMagicVoltage gains (volts) for tuning. */
   default void setHoodGains(double kP, double kI, double kD, double kS, double kV, double kA) {}
 

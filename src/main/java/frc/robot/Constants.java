@@ -21,6 +21,7 @@ import frc.robot.util.LoggedTunableNumber;
 public final class Constants {
   public static class OperatorConstants {
     public static final int DRIVER_CONTROLLER_PORT = 0;
+    public static final int OPERATOR_CONTROLLER_PORT = 1;
   }
 
   // AdvantageKit runtime mode. REAL on a roboRIO; SIM in the physics sim; REPLAY when re-running a log.
@@ -67,7 +68,9 @@ public final class Constants {
     public static final LoggedTunableNumber SHOOTER_KD =
         new LoggedTunableNumber("Shooter/kD", 0.0);
     public static final LoggedTunableNumber SHOOTER_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Shooter/TorqueCurrentLimit", 80.0); // A
+        new LoggedTunableNumber("Shooter/TorqueCurrentLimit", 40.0); // A
+    public static final LoggedTunableNumber SHOOTER_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Shooter/SupplyCurrentLimit", 30.0); // A
 
     // "At speed" gate for the auto-shoot sequence (how close the flywheel must be before feeding).
     public static final LoggedTunableNumber SHOOTER_VELOCITY_TOLERANCE_RPS =
@@ -87,7 +90,7 @@ public final class Constants {
         new LoggedTunableNumber("Shooter/Hood/RestRotations", HOOD_MIN_ROTATIONS); // idle/stow position
     public static final LoggedTunableNumber HOOD_TOLERANCE_ROTATIONS =
         new LoggedTunableNumber("Shooter/Hood/ToleranceRotations", 0.5); // "at position" gate
-    public static final double HOOD_CANCODER_OFFSET_ROT = -0.2026; // magnet offset (rotations), tune on hw
+    public static final double HOOD_CANCODER_OFFSET_ROT = -0.22; // magnet offset (rotations), tune on hw
 
     // MotionMagicVoltage gains (VOLTS; mechanism reads/commands in CANcoder rotations of the hood).
     public static final LoggedTunableNumber HOOD_KS =
@@ -237,7 +240,9 @@ public final class Constants {
     public static final LoggedTunableNumber INTAKE_KD =
         new LoggedTunableNumber("Intake/kD", 0.0);
     public static final LoggedTunableNumber INTAKE_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Intake/TorqueCurrentLimit", 60.0); // A, peak |torque current|
+        new LoggedTunableNumber("Intake/TorqueCurrentLimit", 40.0); // A, peak |torque current|
+    public static final LoggedTunableNumber INTAKE_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Intake/SupplyCurrentLimit", 20.0); // A
   }
 
   /** Carriage deploy slide (the linear mechanism that extends/retracts the intake). */
@@ -302,7 +307,9 @@ public final class Constants {
     public static final LoggedTunableNumber ROLLERS_KD =
         new LoggedTunableNumber("Rollers/kD", 0.0);
     public static final LoggedTunableNumber ROLLERS_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Rollers/TorqueCurrentLimit", 60.0);
+        new LoggedTunableNumber("Rollers/TorqueCurrentLimit", 30.0);
+    public static final LoggedTunableNumber ROLLERS_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Rollers/SupplyCurrentLimit", 20.0); // A
   }
 
   public static final class IndexerConfig {
@@ -324,7 +331,9 @@ public final class Constants {
     public static final LoggedTunableNumber INDEXER_KD =
         new LoggedTunableNumber("Indexer/kD", 0.0);
     public static final LoggedTunableNumber INDEXER_TORQUE_CURRENT_LIMIT =
-        new LoggedTunableNumber("Indexer/TorqueCurrentLimit", 100.0);
+        new LoggedTunableNumber("Indexer/TorqueCurrentLimit", 30.0);
+    public static final LoggedTunableNumber INDEXER_SUPPLY_CURRENT_LIMIT =
+        new LoggedTunableNumber("Indexer/SupplyCurrentLimit", 20.0); // A
   }
 
   /**

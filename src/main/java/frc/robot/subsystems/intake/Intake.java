@@ -33,6 +33,11 @@ public class Intake extends SubsystemBase {
         hashCode() + 1,
         () -> io.setCurrentLimit(INTAKE_TORQUE_CURRENT_LIMIT.get()),
         INTAKE_TORQUE_CURRENT_LIMIT);
+
+    LoggedTunableNumber.ifChanged(
+        hashCode() + 2,
+        () -> io.setSupplyCurrentLimit(INTAKE_SUPPLY_CURRENT_LIMIT.get()),
+        INTAKE_SUPPLY_CURRENT_LIMIT);
   }
 
   /** Spin the rollers forward (intake in) at the tunable setpoint. */

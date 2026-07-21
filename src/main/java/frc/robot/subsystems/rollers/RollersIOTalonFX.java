@@ -3,6 +3,7 @@ package frc.robot.subsystems.rollers;
 import static frc.robot.Constants.RollersConfig.*;
 
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
@@ -26,6 +27,8 @@ public class RollersIOTalonFX implements RollersIO {
     cfg.Slot0.kP = ROLLERS_KP.get();
     cfg.TorqueCurrent.PeakForwardTorqueCurrent =  ROLLERS_TORQUE_CURRENT_LIMIT.get();
     cfg.TorqueCurrent.PeakReverseTorqueCurrent = -ROLLERS_TORQUE_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimit = ROLLERS_SUPPLY_CURRENT_LIMIT.get();
+    cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
     cfg.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     motor.getConfigurator().apply(cfg);
     followerMotor.getConfigurator().apply(cfg);
@@ -63,6 +66,14 @@ public class RollersIOTalonFX implements RollersIO {
     var limit = new TorqueCurrentConfigs();
     limit.PeakForwardTorqueCurrent = amps;
     limit.PeakReverseTorqueCurrent = -amps;
+    motor.getConfigurator().apply(limit);
+  }
+
+  @Override
+  public void setSupplyCurrentLimit(double amps) {
+    var limit = new CurrentLimitsConfigs();
+    limit.SupplyCurrentLimit = amps;
+    limit.SupplyCurrentLimitEnable = true;
     motor.getConfigurator().apply(limit);
   }
 }

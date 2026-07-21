@@ -30,6 +30,11 @@ public class Indexer extends SubsystemBase {
         hashCode() + 1,
         () -> io.setCurrentLimit(INDEXER_TORQUE_CURRENT_LIMIT.get()),
         INDEXER_TORQUE_CURRENT_LIMIT);
+
+    LoggedTunableNumber.ifChanged(
+        hashCode() + 2,
+        () -> io.setSupplyCurrentLimit(INDEXER_SUPPLY_CURRENT_LIMIT.get()),
+        INDEXER_SUPPLY_CURRENT_LIMIT);
   }
 
   public void setIndexerMotorVelocity(double rps) {
